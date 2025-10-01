@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'settings_screen.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -16,12 +17,12 @@ class _UserScreenState extends State<UserScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFE3F2FD),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Card(
-            color: Colors.blue[50],
+            color: Theme.of(context).cardColor,
             child: ListTile(
               title: const Text(
                 'Username',
@@ -30,7 +31,12 @@ class _UserScreenState extends State<UserScreen> {
               trailing: IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () {
-                  // TODO: Implement settings
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
                 },
               ),
             ),
@@ -38,7 +44,7 @@ class _UserScreenState extends State<UserScreen> {
           const SizedBox(height: 16),
 
           Card(
-            color: Colors.blue[50],
+            color: Theme.of(context).cardColor,
             child: Column(
               children: [
                 ListTile(
@@ -57,9 +63,9 @@ class _UserScreenState extends State<UserScreen> {
                         onPressed: () => setState(() => allergensExpanded = !allergensExpanded),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.red),
+                        icon: const Icon(Icons.add_circle),
                         onPressed: () {
-                          // TODO: Implement remove allergens
+                          // TODO: Implement add and remove allergens
                         },
                       ),
                     ],
@@ -79,7 +85,7 @@ class _UserScreenState extends State<UserScreen> {
           const SizedBox(height: 16),
 
           Card(
-            color: Colors.blue[50],
+            color: Theme.of(context).cardColor,
             child: Column(
               children: [
                 ListTile(
@@ -98,9 +104,9 @@ class _UserScreenState extends State<UserScreen> {
                         onPressed: () => setState(() => additivesExpanded = !additivesExpanded),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.red),
+                        icon: const Icon(Icons.add_circle),
                         onPressed: () {
-                          // TODO: Implement remove additives
+                          // TODO: Implement add and remove additives
                         },
                       ),
                     ],

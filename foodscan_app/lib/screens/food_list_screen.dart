@@ -34,29 +34,43 @@ class _FoodListScreenState extends State<FoodListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      color: const Color(0xFFE3F2FD),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
         itemCount: foods.length,
         itemBuilder: (context, i) {
           final food = foods[i];
           return Card(
-            color: Colors.blue[50],
+            color: Theme.of(context).cardColor,
             margin: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               children: [
                 ListTile(
-                  title: Text(food['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(
+                    food['name'],
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
+                    ),
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: Icon(food['expanded'] ? Icons.expand_less : Icons.expand_more, color: Colors.yellow[700]),
+                        icon: Icon(
+                          food['expanded'] ? Icons.expand_less : Icons.expand_more,
+                          color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
+                        ),
                         onPressed: () => _toggleExpand(i),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.red),
+                        icon: Icon(
+                          Icons.remove_circle,
+                          color: isDarkMode ? Colors.redAccent : Colors.red,
+                        ),
                         onPressed: () => _removeFood(i),
                       ),
                     ],
@@ -67,7 +81,12 @@ class _FoodListScreenState extends State<FoodListScreen> {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(info, style: const TextStyle(color: Colors.black87)),
+                      child: Text(
+                        info,
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
                     ),
                 ],
               ],
