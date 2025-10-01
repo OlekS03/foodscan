@@ -2,16 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _notifications = true;
-  String _selectedLanguage = 'English';
 
   @override
   Widget build(BuildContext context) {
@@ -20,76 +12,147 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Settings'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) => Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: ListView(
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Preferences',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Preferences Section
+                Card(
+                  child: ExpansionTile(
+                    initiallyExpanded: true,
+                    title: const Text(
+                      'Preferences',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    children: [
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, _) => Column(
+                          children: [
+                            SwitchListTile(
+                              title: const Text('Dark Mode'),
+                              subtitle: const Text('Enable dark theme'),
+                              value: themeProvider.isDarkMode,
+                              onChanged: (bool value) {
+                                themeProvider.toggleTheme();
+                              },
+                            ),
+                            const Divider(),
+                            SwitchListTile(
+                              title: const Text('Notifications'),
+                              subtitle: const Text('Enable push notifications'),
+                              value: true, // TODO: Implement notifications state
+                              onChanged: (bool value) {
+                                // TODO: Implement notifications toggle
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    SwitchListTile(
-                      title: const Text('Dark Mode'),
-                      subtitle: const Text('Enable dark theme'),
-                      value: themeProvider.isDarkMode,
-                      onChanged: (bool value) {
-                        themeProvider.toggleTheme();
-                      },
-                    ),
-                    const Divider(),
-                    SwitchListTile(
-                      title: const Text('Notifications'),
-                      subtitle: const Text('Enable push notifications'),
-                      value: _notifications,
-                      onChanged: (bool value) {
-                        setState(() {
-                          _notifications = value;
-                        });
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
-                      title: const Text('Language'),
-                      subtitle: Text(_selectedLanguage),
-                      trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () {
-                        // TODO: Implement language selection
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF432222)
-                    : Colors.red[50],
-                child: ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text(
-                    'Sign Out',
-                    style: TextStyle(color: Colors.red),
+                const SizedBox(height: 16),
+
+                // Help Section
+                Card(
+                  child: ExpansionTile(
+                    leading: const Icon(Icons.help_outline),
+                    title: const Text('Help'),
+                    children: [
+                      ListTile(
+                        title: const Text('How do I scan food?'),
+                        subtitle: const Text('Open the camera tab and point your camera at the food\'s barcode'),
+                      ),
+                      ListTile(
+                        title: const Text('How do I add allergens?'),
+                        subtitle: const Text('Go to your profile and tap the allergens section to add new items'),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.email_outlined),
+                        title: const Text('Contact Support'),
+                        subtitle: const Text('support@foodscan.app'),
+                      ),
+                      ListTile(
+                        title: const Text('Version'),
+                        subtitle: const Text('1.0.0'),
+                      ),
+                    ],
                   ),
-                  onTap: () {
-                    // TODO: Implement sign out
-                  },
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+
+                // Delete Account Section
+                Card(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF432222)
+                      : Colors.red[50],
+                  child: ExpansionTile(
+                    leading: const Icon(Icons.delete_forever, color: Colors.red),
+                    title: const Text(
+                      'Delete Account',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Warning: This action cannot be undone',
+                              style: TextStyle(color: Colors.red),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(double.infinity, 48),
+                              ),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Confirm Delete'),
+                                    content: const Text(
+                                      'Are you sure you want to delete your account? This action cannot be undone.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          // TODO: Implement account deletion
+                                          Navigator.pop(context);
+                                        },
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                        ),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              child: const Text('Delete Account'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
