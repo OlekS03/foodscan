@@ -47,6 +47,30 @@ class SettingsScreen extends StatelessWidget {
                                 // TODO: Implement notifications toggle
                               },
                             ),
+                            SwitchListTile(
+                              title: const Text('Auto-Save Scans'),
+                              subtitle: const Text('Automatically save scanned items'),
+                              value: false, // TODO: Implement auto-save state
+                              onChanged: (bool value) {
+                                // TODO: Implement auto-save toggle
+                              },
+                            ),
+                            SwitchListTile(
+                              title: const Text('Allergen Alerts'),
+                              subtitle: const Text('Notify me about allergens in scanned items'),
+                              value: true, // TODO: Implement allergen alerts state
+                              onChanged: (bool value) {
+                                // TODO: Implement allergen alerts toggle
+                              },
+                            ),
+                            SwitchListTile(
+                              title: const Text('Location Services'),
+                              subtitle: const Text('Enable location-based features'),
+                              value: false, // TODO: Implement location services state
+                              onChanged: (bool value) {
+                                // TODO: Implement location services toggle
+                              }
+                            ),
                           ],
                         ),
                       ),
