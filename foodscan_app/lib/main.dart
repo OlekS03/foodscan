@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/food_list_screen.dart';
 import 'screens/camera_screen.dart';
 import 'screens/user_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});

@@ -20,23 +20,7 @@ class _UserScreenState extends State<UserScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            color: Colors.blue[50],
-            child: ListTile(
-              title: const Text(
-                'Username',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: () {
-                  // TODO: Implement settings
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
+          /// Allergens Card
           Card(
             color: Colors.blue[50],
             child: Column(
@@ -46,38 +30,39 @@ class _UserScreenState extends State<UserScreen> {
                     'Allergens',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          allergensExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: Colors.yellow[700],
-                        ),
-                        onPressed: () => setState(() => allergensExpanded = !allergensExpanded),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.red),
-                        onPressed: () {
-                          // TODO: Implement remove allergens
-                        },
-                      ),
-                    ],
+                  trailing: IconButton(
+                    icon: Icon(
+                      allergensExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.yellow[700],
+                    ),
+                    onPressed: () => setState(() {
+                      allergensExpanded = !allergensExpanded;
+                    }),
                   ),
                 ),
-                if (allergensExpanded) ...[
-                  for (final allergen in allergens)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(allergen),
-                    ),
-                ],
+                if (allergensExpanded)
+                  Column(
+                    children: [
+                      for (int i = 0; i < allergens.length; i++)
+                        ListTile(
+                          title: Text(allergens[i]),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.remove_circle, color: Colors.red),
+                            onPressed: () {
+                              setState(() {
+                                allergens.removeAt(i);
+                              });
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
+          /// Additives Card
           Card(
             color: Colors.blue[50],
             child: Column(
@@ -87,33 +72,33 @@ class _UserScreenState extends State<UserScreen> {
                     'Additives',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          additivesExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: Colors.yellow[700],
-                        ),
-                        onPressed: () => setState(() => additivesExpanded = !additivesExpanded),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.red),
-                        onPressed: () {
-                          // TODO: Implement remove additives
-                        },
-                      ),
-                    ],
+                  trailing: IconButton(
+                    icon: Icon(
+                      additivesExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.yellow[700],
+                    ),
+                    onPressed: () => setState(() {
+                      additivesExpanded = !additivesExpanded;
+                    }),
                   ),
                 ),
-                if (additivesExpanded) ...[
-                  for (final additive in additives)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(additive),
-                    ),
-                ],
+                if (additivesExpanded)
+                  Column(
+                    children: [
+                      for (int i = 0; i < additives.length; i++)
+                        ListTile(
+                          title: Text(additives[i]),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.remove_circle, color: Colors.red),
+                            onPressed: () {
+                              setState(() {
+                                additives.removeAt(i);
+                              });
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -122,3 +107,4 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 }
+
