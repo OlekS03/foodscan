@@ -38,22 +38,6 @@ class _FoodListScreenState extends State<FoodListScreen> {
           };
         }).toList();
       });
-    } else {
-      // If no saved data, initialize with default foods
-      setState(() {
-        foods = [
-          {
-            'name': 'Apple',
-            'info': ['Rich in fiber', 'Good for heart'],
-            'expanded': false,
-          },
-          {
-            'name': 'Bread',
-            'info': ['Contains gluten', 'High carbs'],
-            'expanded': false,
-          },
-        ];
-      });
     }
   }
 
