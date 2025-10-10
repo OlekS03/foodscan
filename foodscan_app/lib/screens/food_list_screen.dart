@@ -20,26 +20,33 @@ class _FoodListScreenState extends State<FoodListScreen> {
   /// Loads the list of foods from SharedPreferences.
   Future<void> _loadFoods() async {
     final prefs = await SharedPreferences.getInstance();
-
-    // Get stored JSON-like data (list of strings)
     final List<String>? savedFoods = prefs.getStringList('foods_list');
 
-    if (savedFoods != null) {
-      // Decode the stored data back into Map objects
+    // If nothing is saved yet, start with an empty list
+    if (savedFoods == null || savedFoods.isEmpty) {
       setState(() {
-        foods = savedFoods.map((item) {
-          final parts = item.split('|');
-          final name = parts[0];
-          final info = parts[1].split(',');
-          return {
-            'name': name,
-            'info': info,
-            'expanded': false, // expanded state is not persisted
-          };
-        }).toList();
+        foods = [];
       });
+      return;
     }
+
+    // Decode saved data
+    setState(() {
+      foods = savedFoods.map((item) {
+        final parts = item.split('|');
+        final name = parts.isNotEmpty ? parts[0] : '';
+        final info = parts.length > 1 && parts[1].isNotEmpty
+            ? parts[1].split(',')
+            : <String>[];
+        return {
+          'name': name,
+          'info': info,
+          'expanded': false,
+        };
+      }).toList();
+    });
   }
+
 
   /// Saves the current list of foods to SharedPreferences.
   Future<void> _saveFoods() async {
@@ -107,7 +114,7 @@ class _FoodListScreenState extends State<FoodListScreen> {
             TextButton(
               onPressed: () {
                 if (name.isNotEmpty) {
-                  _addFood(name, info.isNotEmpty ? info.split(',') : []);
+                  addFood(name, info.isNotEmpty ? info.split(',') : []);
                 }
                 Navigator.pop(context);
               },
