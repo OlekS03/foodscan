@@ -69,7 +69,7 @@ class _FoodListScreenState extends State<FoodListScreen> {
   }
 
   /// Adds a new food entry with name and info.
-  void _addFood(String name, List<String> info) async {
+  void addFood(String name, List<String> info) async {
     setState(() {
       foods.add({'name': name, 'info': info, 'expanded': false});
     });
