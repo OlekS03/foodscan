@@ -99,7 +99,12 @@ class _CameraScreenUIState extends State<CameraScreenUI> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Camera permission is required'),
+            Text(
+              'Camera permission is required',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _requestCameraPermission,

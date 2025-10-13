@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FoodListScreen extends StatefulWidget {
   const FoodListScreen({super.key});
@@ -7,18 +8,50 @@ class FoodListScreen extends StatefulWidget {
 }
 
 class _FoodListScreenState extends State<FoodListScreen> {
-  final List<Map<String, dynamic>> foods = [
-    {
-      'name': 'Apple',
-      'info': ['Rich in fiber', 'Good for heart'],
-      'expanded': false,
-    },
-    {
-      'name': 'Bread',
-      'info': ['Contains gluten', 'High carbs'],
-      'expanded': false,
-    },
-  ];
+  List<Map<String, dynamic>> foods = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFoods();
+  }
+
+  Future<void> _loadFoods() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? savedFoods = prefs.getStringList('foods_list');
+
+    if (savedFoods == null || savedFoods.isEmpty) {
+      setState(() {
+        foods = [];
+      });
+      return;
+    }
+
+    setState(() {
+      foods = savedFoods.map((item) {
+        final parts = item.split('|');
+        final name = parts.isNotEmpty ? parts[0] : '';
+        final info = parts.length > 1 && parts[1].isNotEmpty
+            ? parts[1].split(',')
+            : <String>[];
+        return {
+          'name': name,
+          'info': info,
+          'expanded': false,
+        };
+      }).toList();
+    });
+  }
+
+  Future<void> _saveFoods() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> encodedFoods = foods.map((food) {
+      final name = food['name'] as String;
+      final info = (food['info'] as List<String>).join(',');
+      return '$name|$info';
+    }).toList();
+    await prefs.setStringList('foods_list', encodedFoods);
+  }
 
   void _toggleExpand(int index) {
     setState(() {
@@ -30,6 +63,7 @@ class _FoodListScreenState extends State<FoodListScreen> {
     setState(() {
       foods.removeAt(index);
     });
+    _saveFoods(); // Save changes after removing item
   }
 
   @override
@@ -38,62 +72,82 @@ class _FoodListScreenState extends State<FoodListScreen> {
 
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-        itemCount: foods.length,
-        itemBuilder: (context, i) {
-          final food = foods[i];
-          return Card(
-            color: Theme.of(context).cardColor,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text(
-                    food['name'],
+      child: foods.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.no_food,
+                    size: 64,
+                    color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No foods added yet',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).textTheme.titleLarge?.color,
+                      color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.5),
                     ),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+              itemCount: foods.length,
+              itemBuilder: (context, i) {
+                final food = foods[i];
+                return Card(
+                  color: Theme.of(context).cardColor,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
                     children: [
-                      IconButton(
-                        icon: Icon(
-                          food['expanded'] ? Icons.expand_less : Icons.expand_more,
-                          color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
+                      ListTile(
+                        title: Text(
+                          food['name'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).textTheme.titleLarge?.color,
+                          ),
                         ),
-                        onPressed: () => _toggleExpand(i),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.remove_circle,
-                          color: isDarkMode ? Colors.redAccent : Colors.red,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                food['expanded'] ? Icons.expand_less : Icons.expand_more,
+                                color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
+                              ),
+                              onPressed: () => _toggleExpand(i),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.remove_circle,
+                                color: isDarkMode ? Colors.redAccent : Colors.red,
+                              ),
+                              onPressed: () => _removeFood(i),
+                            ),
+                          ],
                         ),
-                        onPressed: () => _removeFood(i),
                       ),
+                      if (food['expanded']) ...[
+                        for (final info in food['info'])
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Text(
+                              info,
+                              style: TextStyle(
+                                color: Theme.of(context).textTheme.bodyMedium?.color,
+                              ),
+                            ),
+                          ),
+                      ],
                     ],
                   ),
-                ),
-                if (food['expanded']) ...[
-                  for (final info in food['info'])
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(
-                        info,
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                        ),
-                      ),
-                    ),
-                ],
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }

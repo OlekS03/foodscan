@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'settings_screen.dart';
 
 class UserScreen extends StatefulWidget {
@@ -10,12 +11,89 @@ class UserScreen extends StatefulWidget {
 class _UserScreenState extends State<UserScreen> {
   bool allergensExpanded = false;
   bool additivesExpanded = false;
+  List<String> allergens = [];
+  List<String> additives = [];
 
-  final List<String> allergens = ['Peanuts', 'Gluten', 'Lactose'];
-  final List<String> additives = ['Yellow 5', 'High-fructose corn syrup', 'MSG'];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedAllergens = prefs.getStringList('user_allergens');
+    final savedAdditives = prefs.getStringList('user_additives');
+
+    setState(() {
+      allergens = savedAllergens ?? ['Peanuts', 'Gluten', 'Lactose'];
+      additives = savedAdditives ?? ['Yellow 5', 'High-fructose corn syrup', 'MSG'];
+    });
+  }
+
+  Future<void> _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('user_allergens', allergens);
+    await prefs.setStringList('user_additives', additives);
+  }
+
+  Future<void> _showAddDialog(String type) async {
+    String newItem = '';
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add new $type'),
+        content: TextField(
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Enter name',
+            border: const OutlineInputBorder(),
+          ),
+          onChanged: (value) => newItem = value,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (newItem.isNotEmpty) {
+                setState(() {
+                  if (type == 'allergen') {
+                    allergens.add(newItem);
+                  } else {
+                    additives.add(newItem);
+                  }
+                });
+                _saveData();
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _removeItem(String type, int index) {
+    setState(() {
+      if (type == 'allergen') {
+        allergens.removeAt(index);
+      } else {
+        additives.removeAt(index);
+      }
+    });
+    _saveData();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: ListView(
@@ -58,27 +136,33 @@ class _UserScreenState extends State<UserScreen> {
                       IconButton(
                         icon: Icon(
                           allergensExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: Colors.yellow[700],
+                          color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
                         ),
                         onPressed: () => setState(() => allergensExpanded = !allergensExpanded),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.add_circle),
-                        onPressed: () {
-                          // TODO: Implement add and remove allergens
-                        },
+                        icon: Icon(
+                          Icons.add_circle,
+                          color: isDarkMode ? Colors.tealAccent : Theme.of(context).primaryColor,
+                        ),
+                        onPressed: () => _showAddDialog('allergen'),
                       ),
                     ],
                   ),
                 ),
-                if (allergensExpanded) ...[
-                  for (final allergen in allergens)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(allergen),
+                if (allergensExpanded)
+                  for (var i = 0; i < allergens.length; i++)
+                    ListTile(
+                      dense: true,
+                      title: Text(allergens[i]),
+                      trailing: IconButton(
+                        icon: Icon(
+                          Icons.remove_circle,
+                          color: isDarkMode ? Colors.redAccent : Colors.red,
+                        ),
+                        onPressed: () => _removeItem('allergen', i),
+                      ),
                     ),
-                ],
               ],
             ),
           ),
@@ -99,27 +183,33 @@ class _UserScreenState extends State<UserScreen> {
                       IconButton(
                         icon: Icon(
                           additivesExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: Colors.yellow[700],
+                          color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
                         ),
                         onPressed: () => setState(() => additivesExpanded = !additivesExpanded),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.add_circle),
-                        onPressed: () {
-                          // TODO: Implement add and remove additives
-                        },
+                        icon: Icon(
+                          Icons.add_circle,
+                          color: isDarkMode ? Colors.tealAccent : Theme.of(context).primaryColor,
+                        ),
+                        onPressed: () => _showAddDialog('additive'),
                       ),
                     ],
                   ),
                 ),
-                if (additivesExpanded) ...[
-                  for (final additive in additives)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(additive),
+                if (additivesExpanded)
+                  for (var i = 0; i < additives.length; i++)
+                    ListTile(
+                      dense: true,
+                      title: Text(additives[i]),
+                      trailing: IconButton(
+                        icon: Icon(
+                          Icons.remove_circle,
+                          color: isDarkMode ? Colors.redAccent : Colors.red,
+                        ),
+                        onPressed: () => _removeItem('additive', i),
+                      ),
                     ),
-                ],
               ],
             ),
           ),
