@@ -3,32 +3,50 @@ import 'package:flutter/material.dart';
 class FoodListScreen extends StatefulWidget {
   const FoodListScreen({super.key});
   @override
-  State<FoodListScreen> createState() => _FoodListScreenState();
+  State<FoodListScreen> createState() => FoodListScreenState();
 }
 
-class _FoodListScreenState extends State<FoodListScreen> {
-  final List<Map<String, dynamic>> foods = [
-    {
-      'name': 'Apple',
-      'info': ['Rich in fiber', 'Good for heart'],
-      'expanded': false,
-    },
-    {
-      'name': 'Bread',
-      'info': ['Contains gluten', 'High carbs'],
-      'expanded': false,
-    },
-  ];
+final Map<String, String> titles = {
+  "ingredients": "Ingredients",
+  "allergens": "Allergens",
+  "traceAllergens": "traceAllergens",
+};
+
+class FoodListScreenState extends State<FoodListScreen> {
+  List<Map<String, dynamic>>? foodInfo = [];
 
   void _toggleExpand(int index) {
     setState(() {
-      foods[index]['expanded'] = !(foods[index]['expanded'] as bool);
+      bool isExpanded = foodInfo?[index]['expanded'] ?? false;
+      foodInfo?[index]['expanded'] = !isExpanded;
     });
   }
 
   void _removeFood(int index) {
     setState(() {
-      foods.removeAt(index);
+      foodInfo?.removeAt(index);
+    });
+  }
+
+  void addItemToFoodsList(
+    String foodName,
+    String ingredients,
+    Map<String, dynamic> nutriments,
+    List<dynamic> allergenTags,
+    List<dynamic> traces,
+    bool hasAllergen,
+  ) {
+    print("inside addItemToFoodsList");
+    setState(() {
+      Map<String, dynamic> foodItem = {
+        'foodName': foodName,
+        'ingredients': ingredients,
+        'nutriments': nutriments,
+        'allergenTags': allergenTags,
+        'traces': traces,
+        'hasAllergen': hasAllergen,
+      };
+      foodInfo?.add(foodItem);
     });
   }
 
@@ -38,36 +56,86 @@ class _FoodListScreenState extends State<FoodListScreen> {
       color: const Color(0xFFE3F2FD),
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-        itemCount: foods.length,
+        itemCount: foodInfo?.length,
         itemBuilder: (context, i) {
-          final food = foods[i];
+          final food = foodInfo?[i];
+          var cardColor = Colors.blue[50];
+          if ((food?['hasAllergen'] ?? false)) {
+            cardColor = const Color.fromARGB(255, 182, 35, 30);
+          }
+
           return Card(
-            color: Colors.blue[50],
+            color: cardColor,
             margin: const EdgeInsets.symmetric(vertical: 8),
+
             child: Column(
               children: [
                 ListTile(
-                  title: Text(food['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(
+                    food?['foodName'] ?? 'Unknown food',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: Icon(food['expanded'] ? Icons.expand_less : Icons.expand_more, color: Colors.yellow[700]),
+                        icon: Icon(
+                          (food?['expanded'] ?? false)
+                              ? Icons.expand_less
+                              : Icons.expand_more,
+                          color: Colors.yellow[700],
+                        ),
                         onPressed: () => _toggleExpand(i),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.red),
+                        icon: const Icon(
+                          Icons.remove_circle,
+                          color: Colors.red,
+                        ),
                         onPressed: () => _removeFood(i),
                       ),
                     ],
                   ),
                 ),
-                if (food['expanded']) ...[
-                  for (final info in food['info'])
+
+                if (food?['expanded'] ?? false) ...[
+                  // Ingredients
+                  if (food?['ingredients'] != null)
                     Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(info, style: const TextStyle(color: Colors.black87)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        "${titles['ingredients']}: ${food?['ingredients'] ?? 'No ingredients available'}",
+                        style: const TextStyle(color: Colors.black87),
+                      ),
+                    ),
+
+                  // Allergen Tags
+                  if (food?['allergenTags'] != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        "${titles['allergens']}: ${food?['allergenTags']?.join(', ')}",
+                        style: const TextStyle(color: Colors.black87),
+                      ),
+                    ),
+
+                  // Trace Tags
+                  if (food?['traces'] != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        "${titles['traceAllergens']}: ${food?['traces']?.join(', ')}",
+                        style: const TextStyle(color: Colors.black87),
+                      ),
                     ),
                 ],
               ],
