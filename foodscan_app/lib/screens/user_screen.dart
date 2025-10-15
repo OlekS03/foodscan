@@ -89,17 +89,21 @@ class _UserScreenState extends State<UserScreen> {
     });
     _saveData();
   }
+  final List<String> allergens = ['Peanuts', 'Gluten', 'Lactose'];
+  final List<String> additives = ['Yellow 5', 'High-fructose corn syrup', 'MSG'];
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      color: const Color(0xFFE3F2FD),
       color: Theme.of(context).scaffoldBackgroundColor,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Card(
+            color: Colors.blue[50],
             color: Theme.of(context).cardColor,
             child: ListTile(
               title: const Text(
@@ -109,6 +113,7 @@ class _UserScreenState extends State<UserScreen> {
               trailing: IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () {
+                  // TODO: Implement settings
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -122,6 +127,7 @@ class _UserScreenState extends State<UserScreen> {
           const SizedBox(height: 16),
 
           Card(
+            color: Colors.blue[50],
             color: Theme.of(context).cardColor,
             child: Column(
               children: [
@@ -137,10 +143,15 @@ class _UserScreenState extends State<UserScreen> {
                         icon: Icon(
                           allergensExpanded ? Icons.expand_less : Icons.expand_more,
                           color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
+                          color: Colors.yellow[700],
                         ),
                         onPressed: () => setState(() => allergensExpanded = !allergensExpanded),
                       ),
                       IconButton(
+                        icon: const Icon(Icons.remove_circle, color: Colors.red),
+                        onPressed: () {
+                          // TODO: Implement remove allergens
+                        },
                         icon: Icon(
                           Icons.add_circle,
                           color: isDarkMode ? Colors.tealAccent : Theme.of(context).primaryColor,
@@ -162,13 +173,21 @@ class _UserScreenState extends State<UserScreen> {
                         ),
                         onPressed: () => _removeItem('allergen', i),
                       ),
+                if (allergensExpanded) ...[
+                  for (final allergen in allergens)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Text(allergen),
                     ),
+                ],
               ],
             ),
           ),
           const SizedBox(height: 16),
 
           Card(
+            color: Colors.blue[50],
             color: Theme.of(context).cardColor,
             child: Column(
               children: [
@@ -184,6 +203,7 @@ class _UserScreenState extends State<UserScreen> {
                         icon: Icon(
                           additivesExpanded ? Icons.expand_less : Icons.expand_more,
                           color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
+                          color: Colors.yellow[700],
                         ),
                         onPressed: () => setState(() => additivesExpanded = !additivesExpanded),
                       ),
@@ -193,10 +213,20 @@ class _UserScreenState extends State<UserScreen> {
                           color: isDarkMode ? Colors.tealAccent : Theme.of(context).primaryColor,
                         ),
                         onPressed: () => _showAddDialog('additive'),
+                        icon: const Icon(Icons.remove_circle, color: Colors.red),
+                        onPressed: () {
+                          // TODO: Implement remove additives
+                        },
                       ),
                     ],
                   ),
                 ),
+                if (additivesExpanded) ...[
+                  for (final additive in additives)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Text(additive),
                 if (additivesExpanded)
                   for (var i = 0; i < additives.length; i++)
                     ListTile(
@@ -210,6 +240,7 @@ class _UserScreenState extends State<UserScreen> {
                         onPressed: () => _removeItem('additive', i),
                       ),
                     ),
+                ],
               ],
             ),
           ),
