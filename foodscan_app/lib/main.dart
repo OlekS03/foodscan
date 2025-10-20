@@ -4,9 +4,6 @@ import 'screens/food_list_screen.dart';
 import 'screens/camera_screen.dart';
 import 'screens/user_screen.dart';
 import 'providers/theme_provider.dart';
-import 'screens/food_list_screen.dart';
-import 'screens/camera_screen.dart';
-import 'screens/user_screen.dart';
 import 'global_keys.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -41,8 +38,6 @@ class _MainScaffoldState extends State<MainScaffold> {
     });
   }
 
-  //BUG: only one active tab's widget exists in tree
-  //      children die/cease every time the tab is changed
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,68 +98,6 @@ class MyApp extends StatelessWidget {
         theme: themeProvider.theme,
         home: const MainScaffold(),
       ),
-    );
-  }
-}
-
-class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
-
-  @override
-  State<MainScaffold> createState() => _MainScaffoldState();
-}
-
-class _MainScaffoldState extends State<MainScaffold> {
-  int _selectedIndex = 1;
-
-  final List<Widget> _screens = [
-    const FoodListScreen(),
-    const CameraScreenUI(),
-    const UserScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: 'List',
-            backgroundColor: Colors.red,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt),
-            label: 'Camera',
-            backgroundColor: Colors.red,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'User',
-            backgroundColor: Colors.red,
-          ),
-        ],
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.shifting,
-      ),
-    return MaterialApp(
-      title: 'Foodscan',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MainScaffold(),
     );
   }
 }
