@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'settings_screen.dart';
+import '../services/user_preferences.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -21,20 +22,13 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedAllergens = prefs.getStringList('user_allergens');
-    final savedAdditives = prefs.getStringList('user_additives');
+    final loadedAllergens = await UserPreferences.getAllergens();
+    final loadedAdditives = await UserPreferences.getAdditives();
 
     setState(() {
-      allergens = savedAllergens ?? ['Peanuts', 'Gluten', 'Lactose'];
-      additives = savedAdditives ?? ['Yellow 5', 'High-fructose corn syrup', 'MSG'];
+      allergens = loadedAllergens;
+      additives = loadedAdditives;
     });
-  }
-
-  Future<void> _saveData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('user_allergens', allergens);
-    await prefs.setStringList('user_additives', additives);
   }
 
   Future<void> _showAddDialog(String type) async {
@@ -87,6 +81,22 @@ class _UserScreenState extends State<UserScreen> {
       }
     });
     _saveData();
+  }
+
+  Future<void> _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('user_allergens', allergens);
+    await prefs.setStringList('user_additives', additives);
+
+    // Show a confirmation snackbar
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preferences saved'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Widget _buildExpandableSection(

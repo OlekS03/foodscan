@@ -9,7 +9,7 @@ class FoodListScreen extends StatefulWidget {
 }
 
 class FoodListScreenState extends State<FoodListScreen> {
-  List<Map<String, dynamic>> foodInfo = [];
+  List<Map<String, Object>> foodInfo = [];
 
   @override
   void initState() {
@@ -30,60 +30,91 @@ class FoodListScreenState extends State<FoodListScreen> {
       return;
     }
 
-    final loadedFoods = savedFoods.map((item) {
-      final parts = item.split('|');
-      return {
-        'foodName': parts[0],
-        'ingredients': parts.length > 1 ? parts[1] : '',
-        'nutriments': parts.length > 2 ? _parseNutriments(parts[2]) : {},
-        'allergenTags': parts.length > 3 ? parts[3].split(',') : [],
-        'traces': parts.length > 4 ? parts[4].split(',') : [],
-        'hasAllergen': parts.length > 5 ? parts[5] == 'true' : false,
-        'expanded': false,
-      };
-    }).toList();
+    try {
+      final loadedFoods = savedFoods.map((item) {
+        final parts = item.split('|');
+        if (parts.isEmpty) return null;
 
-    if (mounted) {
-      setState(() {
-        foodInfo = loadedFoods;
-      });
+        return {
+          'foodName': parts[0],
+          'ingredients': parts.length > 1 ? parts[1] : '',
+          'nutriments': parts.length > 2 ? _parseNutriments(parts[2]) : <String, Object>{},
+          'allergenTags': parts.length > 3 ?
+            (parts[3].isEmpty ? <Object>[] : parts[3].split(',').map((e) => e as Object).toList()) : <Object>[],
+          'traces': parts.length > 4 ?
+            (parts[4].isEmpty ? <Object>[] : parts[4].split(',').map((e) => e as Object).toList()) : <Object>[],
+          'hasAllergen': parts.length > 5 ? parts[5].toLowerCase() == 'true' : false,
+          'expanded': false,
+        };
+      })
+      .where((item) => item != null)
+      .map((item) => Map<String, Object>.from(item!))
+      .toList();
+
+      if (mounted) {
+        setState(() {
+          foodInfo = loadedFoods;
+        });
+      }
+    } catch (e) {
+      print('Error loading foods: $e');
+      if (mounted) {
+        setState(() {
+          foodInfo = [];
+        });
+      }
     }
   }
 
-  Map<String, dynamic> _parseNutriments(String nutrimentsStr) {
+  Map<String, Object> _parseNutriments(String nutrimentsStr) {
     try {
+      if (nutrimentsStr.isEmpty) return {};
+
       final pairs = nutrimentsStr.split(',');
-      final map = <String, dynamic>{};
+      final map = <String, Object>{};
       for (final pair in pairs) {
         final keyValue = pair.split(':');
         if (keyValue.length == 2) {
-          map[keyValue[0]] = double.tryParse(keyValue[1]) ?? keyValue[1];
+          final value = double.tryParse(keyValue[1]) ?? keyValue[1];
+          map[keyValue[0]] = value;
         }
       }
       return map;
     } catch (e) {
+      print('Error parsing nutriments: $e');
       return {};
     }
   }
 
   Future<void> _saveFoods() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> encodedFoods = foodInfo.map((food) {
-      final nutrimentStr = food['nutriments'].entries
-          .map((e) => '${e.key}:${e.value}')
-          .join(',');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> encodedFoods = foodInfo.map((food) {
+        // Convert nutriments to string format
+        final nutriments = food['nutriments'] as Map<String, Object>;
+        final nutrimentStr = nutriments.entries
+            .map((e) => '${e.key}:${e.value}')
+            .join(',');
 
-      return [
-        food['foodName'],
-        food['ingredients'],
-        nutrimentStr,
-        (food['allergenTags'] as List).join(','),
-        (food['traces'] as List).join(','),
-        food['hasAllergen'].toString(),
-      ].join('|');
-    }).toList();
+        // Convert lists to string format
+        final allergenTags = (food['allergenTags'] as List).join(',');
+        final traces = (food['traces'] as List).join(',');
 
-    await prefs.setStringList('foods_list', encodedFoods);
+        // Create the encoded string
+        return [
+          food['foodName'].toString(),
+          food['ingredients'].toString(),
+          nutrimentStr,
+          allergenTags,
+          traces,
+          food['hasAllergen'].toString(),
+        ].join('|');
+      }).toList();
+
+      await prefs.setStringList('foods_list', encodedFoods);
+    } catch (e) {
+      print('Error saving foods: $e');
+    }
   }
 
   void _toggleExpand(int index) {
@@ -109,13 +140,13 @@ class FoodListScreenState extends State<FoodListScreen> {
   ) {
     setState(() {
       foodInfo.add({
-        'foodName': foodName,
-        'ingredients': ingredients,
-        'nutriments': nutriments,
-        'allergenTags': allergenTags,
-        'traces': traces,
-        'hasAllergen': hasAllergen,
-        'expanded': false,
+        'foodName': foodName as Object,
+        'ingredients': ingredients as Object,
+        'nutriments': Map<String, Object>.from(nutriments),
+        'allergenTags': allergenTags.map((e) => e as Object).toList(),
+        'traces': traces.map((e) => e as Object).toList(),
+        'hasAllergen': hasAllergen as Object,
+        'expanded': false as Object,
       });
     });
     _saveFoods();
