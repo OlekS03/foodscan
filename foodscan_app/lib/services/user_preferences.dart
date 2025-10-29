@@ -100,4 +100,14 @@ class UserPreferences {
 
     return matches;
   }
+
+  static Future<void> setAllergens(List<String> allergens) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_allergensKey, allergens);
+  }
+
+  static Future<void> setAdditives(List<String> additives) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_additivesKey, additives);
+  }
 }
