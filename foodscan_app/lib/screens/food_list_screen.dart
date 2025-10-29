@@ -1,190 +1,285 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; /// Needed to save data between sessions.
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FoodListScreen extends StatefulWidget {
   const FoodListScreen({super.key});
 
   @override
-  State<FoodListScreen> createState() => _FoodListScreenState();
+  State<FoodListScreen> createState() => FoodListScreenState();
 }
 
-class _FoodListScreenState extends State<FoodListScreen> {
-  List<Map<String, dynamic>> foods = [];
+class FoodListScreenState extends State<FoodListScreen> {
+  List<Map<String, Object>> foodInfo = [];
 
   @override
   void initState() {
     super.initState();
-    _loadFoods(); // Load saved data when the screen starts.
+    _loadFoods();
   }
 
-  /// Loads the list of foods from SharedPreferences.
   Future<void> _loadFoods() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedFoods = prefs.getStringList('foods_list');
 
-    // If nothing is saved yet, start with an empty list
     if (savedFoods == null || savedFoods.isEmpty) {
-      setState(() {
-        foods = [];
-      });
+      if (mounted) {
+        setState(() {
+          foodInfo = [];
+        });
+      }
       return;
     }
 
-    // Decode saved data
-    setState(() {
-      foods = savedFoods.map((item) {
+    try {
+      final loadedFoods = savedFoods.map((item) {
         final parts = item.split('|');
-        final name = parts.isNotEmpty ? parts[0] : '';
-        final info = parts.length > 1 && parts[1].isNotEmpty
-            ? parts[1].split(',')
-            : <String>[];
+        if (parts.isEmpty) return null;
+
         return {
-          'name': name,
-          'info': info,
+          'foodName': parts[0],
+          'ingredients': parts.length > 1 ? parts[1] : '',
+          'nutriments': parts.length > 2 ? _parseNutriments(parts[2]) : <String, Object>{},
+          'allergenTags': parts.length > 3 ?
+            (parts[3].isEmpty ? <Object>[] : parts[3].split(',').map((e) => e as Object).toList()) : <Object>[],
+          'traces': parts.length > 4 ?
+            (parts[4].isEmpty ? <Object>[] : parts[4].split(',').map((e) => e as Object).toList()) : <Object>[],
+          'hasAllergen': parts.length > 5 ? parts[5].toLowerCase() == 'true' : false,
           'expanded': false,
         };
-      }).toList();
-    });
+      })
+      .where((item) => item != null)
+      .map((item) => Map<String, Object>.from(item!))
+      .toList();
+
+      if (mounted) {
+        setState(() {
+          foodInfo = loadedFoods;
+        });
+      }
+    } catch (e) {
+      print('Error loading foods: $e');
+      if (mounted) {
+        setState(() {
+          foodInfo = [];
+        });
+      }
+    }
   }
 
+  Map<String, Object> _parseNutriments(String nutrimentsStr) {
+    try {
+      if (nutrimentsStr.isEmpty) return {};
 
-  /// Saves the current list of foods to SharedPreferences.
+      final pairs = nutrimentsStr.split(',');
+      final map = <String, Object>{};
+      for (final pair in pairs) {
+        final keyValue = pair.split(':');
+        if (keyValue.length == 2) {
+          final value = double.tryParse(keyValue[1]) ?? keyValue[1];
+          map[keyValue[0]] = value;
+        }
+      }
+      return map;
+    } catch (e) {
+      print('Error parsing nutriments: $e');
+      return {};
+    }
+  }
+
   Future<void> _saveFoods() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> encodedFoods = foodInfo.map((food) {
+        // Convert nutriments to string format
+        final nutriments = food['nutriments'] as Map<String, Object>;
+        final nutrimentStr = nutriments.entries
+            .map((e) => '${e.key}:${e.value}')
+            .join(',');
 
-    // Convert Map list into a simple String list for storage
-    List<String> dataToSave = foods.map((food) {
-      final name = food['name'];
-      final info = (food['info'] as List).join(',');
-      return '$name|$info';
-    }).toList();
+        // Convert lists to string format
+        final allergenTags = (food['allergenTags'] as List).join(',');
+        final traces = (food['traces'] as List).join(',');
 
-    await prefs.setStringList('foods_list', dataToSave);
+        // Create the encoded string
+        return [
+          food['foodName'].toString(),
+          food['ingredients'].toString(),
+          nutrimentStr,
+          allergenTags,
+          traces,
+          food['hasAllergen'].toString(),
+        ].join('|');
+      }).toList();
+
+      await prefs.setStringList('foods_list', encodedFoods);
+    } catch (e) {
+      print('Error saving foods: $e');
+    }
   }
 
   void _toggleExpand(int index) {
     setState(() {
-      foods[index]['expanded'] = !(foods[index]['expanded'] as bool);
+      foodInfo[index]['expanded'] = !(foodInfo[index]['expanded'] as bool);
     });
   }
 
-  void _removeFood(int index) async {
+  void _removeFood(int index) {
     setState(() {
-      foods.removeAt(index);
+      foodInfo.removeAt(index);
+      _saveFoods();
     });
-    await _saveFoods(); // Persist change
   }
 
-  /// Adds a new food entry with name and info.
-  void addFood(String name, List<String> info) async {
+  void addItemToFoodsList(
+    String foodName,
+    String ingredients,
+    Map<String, dynamic> nutriments,
+    List<dynamic> allergenTags,
+    List<dynamic> traces,
+    bool hasAllergen,
+  ) {
     setState(() {
-      foods.add({'name': name, 'info': info, 'expanded': false});
+      foodInfo.add({
+        'foodName': foodName as Object,
+        'ingredients': ingredients as Object,
+        'nutriments': Map<String, Object>.from(nutriments),
+        'allergenTags': allergenTags.map((e) => e as Object).toList(),
+        'traces': traces.map((e) => e as Object).toList(),
+        'hasAllergen': hasAllergen as Object,
+        'expanded': false as Object,
+      });
     });
-    await _saveFoods(); // Persist change
+    _saveFoods();
   }
 
-  /// Dialog to add a new food manually For Testing.
-  Future<void> _showAddFoodDialog(BuildContext context) async {
-    String name = '';
-    String info = '';
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add New Food (Test)'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'Food name'),
-                onChanged: (value) => name = value,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Info (comma-separated)'),
-                onChanged: (value) => info = value,
-              ),
-            ],
+  Widget _buildInfoSection(String title, String content) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.titleMedium?.color,
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+          const SizedBox(height: 4),
+          Text(
+            content,
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
-            TextButton(
-              onPressed: () {
-                if (name.isNotEmpty) {
-                  addFood(name, info.isNotEmpty ? info.split(',') : []);
-                }
-                Navigator.pop(context);
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFE3F2FD),
-      appBar: AppBar(
-        title: const Text('Food List'),
-        backgroundColor: Colors.blue[400],
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-        itemCount: foods.length,
-        itemBuilder: (context, i) {
-          final food = foods[i];
-          return Card(
-            color: Colors.blue[50],
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text(
-                    food['name'],
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Food List'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        ),
+        body: Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: foodInfo.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      IconButton(
-                        icon: Icon(
-                          food['expanded'] ? Icons.expand_less : Icons.expand_more,
-                          color: Colors.yellow[700],
-                        ),
-                        onPressed: () => _toggleExpand(i),
+                      Icon(
+                        Icons.no_food,
+                        size: 64,
+                        color: Theme.of(context).textTheme.bodyLarge?.color?.withAlpha(128),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.red),
-                        onPressed: () => _removeFood(i),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No foods added yet',
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyLarge?.color?.withAlpha(128),
+                        ),
                       ),
                     ],
                   ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+                  itemCount: foodInfo.length,
+                  itemBuilder: (context, i) {
+                    final food = foodInfo[i];
+                    var cardColor = isDarkMode
+                        ? Theme.of(context).cardColor
+                        : Colors.blue[50];
+
+                    if (food['hasAllergen'] == true) {
+                      cardColor = isDarkMode
+                          ? const Color.fromARGB(255, 182, 35, 30)
+                          : const Color.fromARGB(255, 255, 200, 200);
+                    }
+
+                    return Card(
+                      color: cardColor,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: Text(
+                              food['foodName'] as String,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).textTheme.titleLarge?.color,
+                              ),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    food['expanded'] as bool ? Icons.expand_less : Icons.expand_more,
+                                    color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
+                                  ),
+                                  onPressed: () => _toggleExpand(i),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.remove_circle,
+                                    color: isDarkMode ? Colors.redAccent : Colors.red,
+                                  ),
+                                  onPressed: () => _removeFood(i),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (food['expanded'] as bool) ...[
+                            _buildInfoSection('Ingredients', food['ingredients'] as String),
+                            if ((food['allergenTags'] as List).isNotEmpty)
+                              _buildInfoSection('Allergens', (food['allergenTags'] as List).join(', ')),
+                            if ((food['traces'] as List).isNotEmpty)
+                              _buildInfoSection('May Contain', (food['traces'] as List).join(', ')),
+                            if ((food['nutriments'] as Map).isNotEmpty)
+                              _buildInfoSection('Nutrition', _formatNutriments(food['nutriments'] as Map<String, dynamic>)),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
                 ),
-                if (food['expanded']) ...[
-                  for (final info in food['info'])
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(info, style: const TextStyle(color: Colors.black87)),
-                    ),
-                ],
-              ],
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddFoodDialog(context),
-        backgroundColor: Colors.blue[400],
-        child: const Icon(Icons.add),
+        ),
       ),
     );
   }
-}
 
+  String _formatNutriments(Map<String, dynamic> nutriments) {
+    return nutriments.entries
+        .map((e) => '${e.key}: ${e.value}')
+        .join('\n');
+  }
+}

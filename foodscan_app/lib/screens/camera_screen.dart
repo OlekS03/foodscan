@@ -1,56 +1,239 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import '../logic/food_info.dart';
+import '../screens/food_list_screen.dart';
+import '../global_keys.dart';
+import '../services/user_preferences.dart';
 
-class CameraScreenUI extends StatelessWidget {
-  const CameraScreenUI({super.key});
+class BarcodeScannerPage extends StatefulWidget {
+  const BarcodeScannerPage({super.key});
+
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFE3F2FD),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Center(
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.7,
-              height: MediaQuery.of(context).size.height * 0.4,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(color: Colors.black26, width: 2),
-              ),
-              child: const Center(
-                child: Text('Camera Preview', style: TextStyle(color: Colors.black38)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 40),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+  State<BarcodeScannerPage> createState() => _BarcodeScannerPageState();
+}
+
+class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
+  bool _isScanning = false;
+  final MobileScannerController _controller = MobileScannerController();
+  String? barcodeResult = '';
+  bool optOutFlag = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.stop();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggleScanning() {
+    setState(() {
+      _isScanning = !_isScanning;
+      if (_isScanning) {
+        _controller.start();
+      } else {
+        _controller.stop();
+      }
+    });
+  }
+
+  void _loadWarningPrompt(
+    BuildContext context,
+    String foodName,
+    String ingredients,
+    Map<String, dynamic> nutriments,
+    List<dynamic> allergenTags,
+    List<dynamic> traces,
+    List<String> matchedAllergens,
+    List<String> matchedAdditives,
+  ) {
+    String warningMessage = '';
+    if (matchedAllergens.isNotEmpty) {
+      warningMessage += 'Allergens found: ${matchedAllergens.join(", ")}\n';
+    }
+    if (matchedAdditives.isNotEmpty) {
+      warningMessage += 'Additives found: ${matchedAdditives.join(", ")}';
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Warning'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.cyanAccent,
-                  shape: const CircleBorder(),
-                  padding: const EdgeInsets.all(32),
-                  elevation: 4,
-                ),
-                child: const Text('Take photo', style: TextStyle(color: Colors.black)),
-              ),
-              const SizedBox(width: 24),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.cyanAccent,
-                  shape: const CircleBorder(),
-                  padding: const EdgeInsets.all(24),
-                  elevation: 4,
-                ),
-                child: const Text('Enter as text', style: TextStyle(color: Colors.black, fontSize: 12)),
-              ),
+              Text(warningMessage),
+              const SizedBox(height: 16),
+              const Text('Would you like to add this item anyway?'),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                foodListKey.currentState?.addItemToFoodsList(
+                  foodName,
+                  ingredients,
+                  nutriments,
+                  allergenTags,
+                  traces,
+                  true,
+                );
+              },
+              child: const Text('Yes'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('No'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handleBarcodeScan(String barcode) async {
+    final foodInfo = await ingredientsAndNutrimentsFromBarcode(barcode);
+
+    if (foodInfo != null && mounted) {
+      final foodName = foodInfo['food_name'] as String;
+      final ingredients = foodInfo['ingredients'] as String? ?? 'No ingredients listed';
+      final nutriments = foodInfo['nutriments'] as Map<String, dynamic>? ?? {};
+      final allergenTags = foodInfo['allergen_tags'] as List<dynamic>? ?? [];
+      final traces = foodInfo['traces'] as List<dynamic>? ?? [];
+
+      // Check for allergens and additives
+      final matchedAllergens = await UserPreferences.findMatchingAllergens(
+        ingredients,
+        allergenTags,
+        traces,
+      );
+      final matchedAdditives = await UserPreferences.findMatchingAdditives(
+        ingredients,
+      );
+
+      if (!mounted) return;
+
+      // Show warning if matches found
+      if (matchedAllergens.isNotEmpty || matchedAdditives.isNotEmpty) {
+        _loadWarningPrompt(
+          context,
+          foodName,
+          ingredients,
+          nutriments,
+          allergenTags,
+          traces,
+          matchedAllergens,
+          matchedAdditives,
+        );
+      } else {
+        // No allergens or additives found, add item directly
+        foodListKey.currentState?.addItemToFoodsList(
+          foodName,
+          ingredients,
+          nutriments,
+          allergenTags,
+          traces,
+          false,
+        );
+      }
+    }
+  }
+
+  void _showTestBarcodeDialog() {
+    String barcode = '';
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Test Barcode Input'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter a barcode to test (e.g., 5449000000996 for Coca-Cola)'),
+            TextField(
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: 'Enter barcode number',
+              ),
+              onChanged: (value) => barcode = value,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (barcode.isNotEmpty) {
+                _handleBarcodeScan(barcode);
+              }
+            },
+            child: const Text('Test'),
+          ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Scan Barcode'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.keyboard),
+            tooltip: 'Manual Input',
+            onPressed: _showTestBarcodeDialog,
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: _controller,
+            onDetect: (capture) {
+              if (!_isScanning) return; // Ignore detections when not scanning
+              final List<Barcode> barcodes = capture.barcodes;
+              for (final barcode in barcodes) {
+                if (barcode.rawValue != null) {
+                  _handleBarcodeScan(barcode.rawValue!);
+                  _toggleScanning(); // Stop scanning after detection
+                }
+              }
+            },
+          ),
+          if (!_isScanning)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: Text(
+                  'Tap the scan button to start scanning',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _toggleScanning,
+        icon: Icon(_isScanning ? Icons.stop : Icons.qr_code_scanner),
+        label: Text(_isScanning ? 'Stop' : 'Scan'),
+        backgroundColor: _isScanning ? Colors.red : Theme.of(context).primaryColor,
       ),
     );
   }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'screens/food_list_screen.dart';
 import 'screens/camera_screen.dart';
 import 'screens/user_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'providers/theme_provider.dart';
+import 'global_keys.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -12,11 +14,21 @@ class MainScaffold extends StatefulWidget {
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
-  int _selectedIndex = 1;
+  //We are forcing the list screen to be build durring initalization so the
+  //respondToBarcodeRetrieval function can make the call to the food_list_screen's
+  //addFoodItemToList function.
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      foodListKey.currentState?.setState(() {});
+    });
+  }
 
+  int _selectedIndex = 1;
   final List<Widget> _screens = [
-    const FoodListScreen(),
-    const CameraScreenUI(),
+    FoodListScreen(key: foodListKey),
+    const BarcodeScannerPage(),
     const UserScreen(),
   ];
 
@@ -29,7 +41,14 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      /*
       body: _screens[_selectedIndex],
+      */
+      body: IndexedStack(
+      index: _selectedIndex,
+      children: _screens,
+      ),
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -60,20 +79,25 @@ class _MainScaffoldState extends State<MainScaffold> {
 }
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Foodscan',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) => MaterialApp(
+        title: 'Foodscan',
+        theme: themeProvider.theme,
+        home: const MainScaffold(),
       ),
-      home: const MainScaffold(),
     );
   }
 }
