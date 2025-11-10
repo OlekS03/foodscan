@@ -21,7 +21,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   @override
   void initState() {
     super.initState();
-    _controller.stop();
+    _controller.start();
   }
 
   @override
@@ -33,11 +33,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   void _toggleScanning() {
     setState(() {
       _isScanning = !_isScanning;
-      if (_isScanning) {
-        _controller.start();
-      } else {
-        _controller.stop();
-      }
     });
   }
 
@@ -214,19 +209,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
               }
             },
           ),
-          if (!_isScanning)
-            Container(
-              color: Colors.black54,
-              child: Center(
-                child: Text(
-                  'Tap the scan button to start scanning',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
