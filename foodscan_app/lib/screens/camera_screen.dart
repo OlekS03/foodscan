@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../logic/food_info.dart';
 import '../global_keys.dart';
 import '../services/user_preferences.dart';
+import 'scanned_food_detail_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -38,123 +39,44 @@ class _CameraScreenState extends State<CameraScreen> {
     });
   }
 
-  void _loadWarningPrompt(
-    BuildContext context,
-    String foodName,
-    String ingredients,
-    Map<String, dynamic> nutriments,
-    List<dynamic> allergenTags,
-    List<dynamic> traces,
-    List<String> matchedAllergens,
-    List<String> matchedAdditives,
-  ) {
-    final theme = Theme.of(context);
+  void _handleBarcodeScan(String barcode) async {
+    try {
+      // Show loading indicator
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.warning_amber_rounded,
-                color: theme.colorScheme.error,
-                size: 28,
+      final foodInfo = await ingredientsAndNutrimentsFromBarcode(barcode);
+
+      // Dismiss loading indicator
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      if (foodInfo == null) {
+        // Show error if no product found
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Product Not Found'),
+            content: const Text('Unable to find product information. Please try again or scan a different product.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
               ),
-              const SizedBox(width: 8),
-              const Text('Warning'),
             ],
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  foodName,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (matchedAllergens.isNotEmpty) ...[
-                  Text(
-                    'Allergens Detected:',
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: matchedAllergens.map((allergen) => Chip(
-                      label: Text(allergen),
-                      backgroundColor: theme.colorScheme.errorContainer,
-                      labelStyle: TextStyle(
-                        color: theme.colorScheme.onErrorContainer,
-                      ),
-                    )).toList(),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                if (matchedAdditives.isNotEmpty) ...[
-                  Text(
-                    'Additives Found:',
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: matchedAdditives.map((additive) => Chip(
-                      label: Text(additive),
-                      backgroundColor: theme.colorScheme.secondaryContainer,
-                      labelStyle: TextStyle(
-                        color: theme.colorScheme.onSecondaryContainer,
-                      ),
-                    )).toList(),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                Text(
-                  'Would you like to add this item to your list?',
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Skip',
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
-            ),
-            FilledButton.icon(
-              icon: const Icon(Icons.add),
-              label: const Text('Add Anyway'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                foodListKey.currentState?.addItemToFoodsList(
-                  foodName,
-                  ingredients,
-                  nutriments,
-                  allergenTags,
-                  traces,
-                  true,
-                );
-              },
-            ),
-          ],
         );
-      },
-    );
-  }
+        return;
+      }
 
-  void _handleBarcodeScan(String barcode) async {
-    final foodInfo = await ingredientsAndNutrimentsFromBarcode(barcode);
-
-    if (foodInfo != null && mounted) {
-      final foodName = foodInfo['food_name'] as String;
+      final foodName = foodInfo['food_name'] as String? ?? 'Unknown Product';
       final ingredients = foodInfo['ingredients'] as String? ?? 'No ingredients listed';
       final nutriments = foodInfo['nutriments'] as Map<String, dynamic>? ?? {};
       final allergenTags = foodInfo['allergen_tags'] as List<dynamic>? ?? [];
@@ -172,29 +94,140 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (!mounted) return;
 
-      // Show warning if matches found
-      if (matchedAllergens.isNotEmpty || matchedAdditives.isNotEmpty) {
-        _loadWarningPrompt(
-          context,
-          foodName,
-          ingredients,
-          nutriments,
-          allergenTags,
-          traces,
-          matchedAllergens,
-          matchedAdditives,
+      // Show warning dialog if allergens are found
+      if (matchedAllergens.isNotEmpty) {
+        final shouldContinue = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[200],
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.warning, color: Colors.red, size: 32),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'ALLERGIC',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Icon(Icons.warning, color: Colors.red, size: 32),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'CONTAINS:\n"${matchedAllergens.join('", "')}"',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'CONTINUE TO VIEW\nPRODUCT?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text(
+                            'YES',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text(
+                            'NO',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         );
-      } else {
-        // No allergens or additives found, add item directly
-        foodListKey.currentState?.addItemToFoodsList(
-          foodName,
-          ingredients,
-          nutriments,
-          allergenTags,
-          traces,
-          false,
-        );
+
+        if (shouldContinue != true) {
+          return;
+        }
       }
+
+      // Navigate to detailed food information screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ScannedFoodDetailScreen(
+            foodName: foodName,
+            companyName: foodInfo['brand'] as String?,
+            ingredients: ingredients,
+            nutriments: nutriments,
+            allergenTags: allergenTags,
+            traces: traces,
+            matchedAllergens: matchedAllergens,
+            matchedAdditives: matchedAdditives,
+            imageUrl: foodInfo['image_url'] as String?,
+          ),
+        ),
+      );
+    } catch (e) {
+      // Dismiss loading indicator if it's showing
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      if (!mounted) return;
+
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Connection Error'),
+          content: const Text('Unable to connect to the food database. Please check your internet connection and try again.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
   }
 

@@ -43,16 +43,13 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 1;
 
-  final List<Widget> _screens = [
-    const FoodListScreen(),
-    const CameraScreen(),
-    const UserScreen(),
-  ];
+  // Keep persistent instances so state isn't lost
+  final FoodListScreen _foodListScreen = FoodListScreen(key: foodListKey);
+  final CameraScreen _cameraScreen = const CameraScreen();
+  final UserScreen _userScreen = const UserScreen();
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
@@ -60,7 +57,14 @@ class _MainScaffoldState extends State<MainScaffold> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _foodListScreen,
+          _cameraScreen,
+          _userScreen,
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,

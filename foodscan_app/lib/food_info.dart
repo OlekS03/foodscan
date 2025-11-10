@@ -14,7 +14,11 @@ Future<Map<String, dynamic>?> ingredientsAndNutrimentsFromBarcode(
   */
   final Uri uri = Uri.parse(
     'https://world.openfoodfacts.org/api/v2/product/$barcode.json',
-  ).replace(queryParameters: {'fields': 'code,ingredients_text,nutriments'});
+  ).replace(
+    queryParameters: {
+      'fields': 'product_name,code,ingredients_text,nutriments,allergens,allergens_tags,traces_tags,brands,image_url'
+    },
+  );
 
   /*
       HTTP Response Handling:
@@ -36,10 +40,34 @@ Future<Map<String, dynamic>?> ingredientsAndNutrimentsFromBarcode(
   }
   final product = json['product'] as Map<String, dynamic>;
   final ingredients = product['ingredients_text'];
-  //final nutriments = product['nutriments'] as Map<String, dynamic>?;
+  final nutriments = product['nutriments'] as Map<String, dynamic>?;
+  final allergenTags = product['allergens_tags'] as List<dynamic>?;
+  final traces = product['traces_tags'] as List<dynamic>?;
+  final foodName = product['product_name'] as String? ?? 'Unknown Food';
+  final brands = product['brands'] as String?;
+  final imageUrl = product['image_url'] as String?;
+
+  List<String>? cleanedAllergenTags;
+  if (allergenTags != null) {
+    cleanedAllergenTags = [];
+    for (final tag in allergenTags) {
+      if (tag is String) {
+        if (tag.length > 3) {
+          cleanedAllergenTags.add(tag.substring(3));
+        } else {
+          cleanedAllergenTags.add('');
+        }
+      }
+    }
+  }
 
   return {
+    'food_name': foodName,
     'ingredients': ingredients,
-    //'nutriments': nutriments,
+    'nutriments': nutriments ?? {},
+    'allergen_tags': cleanedAllergenTags ?? [],
+    'traces': traces ?? [],
+    'brand': brands,
+    'image_url': imageUrl,
   };
 }
