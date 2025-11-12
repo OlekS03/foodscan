@@ -43,7 +43,6 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 1;
 
-  // Keep persistent instances so state isn't lost
   final FoodListScreen _foodListScreen = FoodListScreen(key: foodListKey);
   final CameraScreen _cameraScreen = const CameraScreen();
   final UserScreen _userScreen = const UserScreen();

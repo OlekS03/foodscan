@@ -29,12 +29,12 @@ class ScannedFoodDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isAllergic = matchedAllergens.isNotEmpty;
+    final isDarkMode = theme.brightness == Brightness.dark;
 
-    // Calculate additive level (0.0 to 1.0)
     final additiveLevel = _calculateAdditiveLevel();
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -42,7 +42,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
               ),
               child: Row(
@@ -88,14 +88,12 @@ class ScannedFoodDetailScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    // Product Image and Name Section
                     Container(
                       width: double.infinity,
-                      color: Colors.white,
+                      color: theme.colorScheme.surface,
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          // Product Image Placeholder
                           Container(
                             width: 80,
                             height: 80,
@@ -105,57 +103,12 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                             ),
                             child: imageUrl != null
                               ? Image.network(imageUrl!, fit: BoxFit.cover)
-                              : Stack(
-                                  children: [
-                                    const Center(
-                                      child: Text(
-                                        'Food Product Picture',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                    // X marks in corners
-                                    Positioned(
-                                      top: 8,
-                                      left: 8,
-                                      child: Container(
-                                        width: 2,
-                                        height: 20,
-                                        color: Colors.black,
-                                        transform: Matrix4.rotationZ(0.785398),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Container(
-                                        width: 2,
-                                        height: 20,
-                                        color: Colors.black,
-                                        transform: Matrix4.rotationZ(-0.785398),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      bottom: 8,
-                                      left: 8,
-                                      child: Container(
-                                        width: 2,
-                                        height: 20,
-                                        color: Colors.black,
-                                        transform: Matrix4.rotationZ(-0.785398),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      bottom: 8,
-                                      right: 8,
-                                      child: Container(
-                                        width: 2,
-                                        height: 20,
-                                        color: Colors.black,
-                                        transform: Matrix4.rotationZ(0.785398),
-                                      ),
-                                    ),
-                                  ],
+                              : const Center(
+                                  child: Icon(
+                                    Icons.image_not_supported,
+                                    size: 40,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                           ),
                           const SizedBox(width: 16),
@@ -175,7 +128,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                                     companyName!,
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.grey[600],
+                                      color: theme.textTheme.bodyMedium?.color,
                                     ),
                                   ),
                               ],
@@ -190,7 +143,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                     // Allergen Status Section
                     Container(
                       width: double.infinity,
-                      color: Colors.white,
+                      color: theme.colorScheme.surface,
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
@@ -218,7 +171,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                     // Additives Section
                     Container(
                       width: double.infinity,
-                      color: Colors.white,
+                      color: theme.colorScheme.surface,
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +201,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                             _getAdditiveDescription(additiveLevel),
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: theme.textTheme.bodyMedium?.color,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -259,7 +212,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                                 child: Container(
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey[300],
+                                    color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: FractionallySizedBox(
@@ -291,10 +244,9 @@ class ScannedFoodDetailScreen extends StatelessWidget {
 
                     const SizedBox(height: 1),
 
-                    // Ingredients Section
                     Container(
                       width: double.infinity,
-                      color: Colors.white,
+                      color: theme.colorScheme.surface,
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,10 +267,9 @@ class ScannedFoodDetailScreen extends StatelessWidget {
 
                     const SizedBox(height: 1),
 
-                    // Macro Nutrients Section
                     Container(
                       width: double.infinity,
-                      color: Colors.white,
+                      color: theme.colorScheme.surface,
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,15 +290,13 @@ class ScannedFoodDetailScreen extends StatelessWidget {
 
                     const SizedBox(height: 1),
 
-                    // Individual Macro Nutrient Bars
-                    ..._buildMacroNutrientBars(),
+                    ..._buildMacroNutrientBars(context),
 
                     const SizedBox(height: 20),
 
-                    // Add to Food List Section
                     Container(
                       width: double.infinity,
-                      color: Colors.white,
+                      color: theme.colorScheme.surface,
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
@@ -433,21 +382,6 @@ class ScannedFoodDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCornerX(double? top, double? left, double rotation, {double? bottom, double? right}) {
-    return Positioned(
-      top: top,
-      left: left,
-      bottom: bottom,
-      right: right,
-      child: Container(
-        width: 2,
-        height: 20,
-        color: Colors.black,
-        transform: Matrix4.rotationZ(rotation),
-      ),
-    );
-  }
-
   List<Widget> _buildIngredientsList() {
     if (ingredients.isEmpty || ingredients == 'No ingredients listed') {
       return [
@@ -466,10 +400,10 @@ class ScannedFoodDetailScreen extends StatelessWidget {
   }
 
   double _calculateAdditiveLevel() {
-    if (matchedAdditives.isEmpty) return 0.2; // Low
-    if (matchedAdditives.length <= 2) return 0.4; // Low-moderate
-    if (matchedAdditives.length <= 4) return 0.7; // Moderate-high
-    return 1.0; // High
+    if (matchedAdditives.isEmpty) return 0.2;
+    if (matchedAdditives.length <= 2) return 0.4; //
+    if (matchedAdditives.length <= 4) return 0.7; //
+    return 1.0;
   }
 
   Color _getAdditiveColor(double level) {
@@ -487,20 +421,18 @@ class ScannedFoodDetailScreen extends StatelessWidget {
   List<Widget> _buildMacroNutrientsList() {
     List<Widget> nutrientsList = [];
 
-    // Common nutrient keys to look for in the API data
     Map<String, List<String>> nutrientKeys = {
-      'Energy': ['energy-kcal_100g', 'energy_100g', 'energy-kcal', 'energy'],
-      'Protein': ['proteins_100g', 'proteins'],
-      'Fat': ['fat_100g', 'fat'],
-      'Saturated Fat': ['saturated-fat_100g', 'saturated-fat'],
-      'Carbohydrates': ['carbohydrates_100g', 'carbohydrates'],
-      'Sugars': ['sugars_100g', 'sugars'],
-      'Fiber': ['fiber_100g', 'fiber'],
-      'Sodium': ['sodium_100g', 'sodium'],
-      'Salt': ['salt_100g', 'salt'],
+      'Energy': ['energy-kcal_serving', 'energy_serving', 'energy-kcal_100g', 'energy_100g', 'energy-kcal', 'energy'],
+      'Protein': ['proteins_serving', 'proteins_100g', 'proteins'],
+      'Fat': ['fat_serving', 'fat_100g', 'fat'],
+      'Saturated Fat': ['saturated-fat_serving', 'saturated-fat_100g', 'saturated-fat'],
+      'Carbohydrates': ['carbohydrates_serving', 'carbohydrates_100g', 'carbohydrates'],
+      'Sugars': ['sugars_serving', 'sugars_100g', 'sugars'],
+      'Fiber': ['fiber_serving', 'fiber_100g', 'fiber'],
+      'Sodium': ['sodium_serving', 'sodium_100g', 'sodium'],
+      'Salt': ['salt_serving', 'salt_100g', 'salt'],
     };
 
-    // Check each nutrient and add if available
     nutrientKeys.forEach((nutrientName, keys) {
       double? value = _getNutrientValue(keys);
       if (value != null) {
@@ -514,7 +446,6 @@ class ScannedFoodDetailScreen extends StatelessWidget {
       }
     });
 
-    // If no nutrients found, show placeholder
     if (nutrientsList.isEmpty) {
       return [
         const Text('Energy: 250 kcal'),
@@ -540,33 +471,35 @@ class ScannedFoodDetailScreen extends StatelessWidget {
     }
   }
 
-  List<Widget> _buildMacroNutrientBars() {
+  List<Widget> _buildMacroNutrientBars(BuildContext context) {
     return [
-      _buildNutrientBar('Protein', 'proteins_100g', 'proteins'),
-      _buildNutrientBar('Fats', 'fat_100g', 'fat'),
-      _buildNutrientBar('Carbs', 'carbohydrates_100g', 'carbohydrates'),
+      _buildNutrientBar(context, 'Protein', 'proteins_serving', 'proteins_100g', 'proteins'),
+      _buildNutrientBar(context, 'Fats', 'fat_serving', 'fat_100g', 'fat'),
+      _buildNutrientBar(context, 'Carbs', 'carbohydrates_serving', 'carbohydrates_100g', 'carbohydrates'),
     ];
   }
 
-  Widget _buildNutrientBar(String name, String primaryKey, String fallbackKey) {
-    // Try to get nutrient value with different possible keys
-    double? value = _getNutrientValue([primaryKey, fallbackKey, '${fallbackKey}_100g']);
+  Widget _buildNutrientBar(BuildContext context, String name, String primaryKey, String fallbackKey, String evenMoreFallback) {
+    double? value = _getNutrientValue([primaryKey, fallbackKey, evenMoreFallback, '${fallbackKey}_100g']);
+    final theme = Theme.of(context);
 
     return Container(
       width: double.infinity,
-      color: Colors.white,
+      color: theme.colorScheme.surface,
       margin: const EdgeInsets.only(bottom: 1),
       padding: const EdgeInsets.all(16),
       child: value != null ?
-        _buildNutrientWithBar(name, value) :
-        _buildNutrientNotProvided(name),
+        _buildNutrientWithBar(context, name, value) :
+        _buildNutrientNotProvided(context, name),
     );
   }
 
-  Widget _buildNutrientWithBar(String name, double value) {
+  Widget _buildNutrientWithBar(BuildContext context, String name, double value) {
     final level = _calculateNutrientLevel(name, value);
     final description = _getNutrientDescription(name, level);
     final color = _getNutrientColor(level);
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -583,7 +516,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
           description,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[600],
+            color: theme.textTheme.bodyMedium?.color,
           ),
         ),
         const SizedBox(height: 12),
@@ -591,7 +524,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
         Container(
           height: 8,
           decoration: BoxDecoration(
-            color: Colors.grey[300],
+            color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
             borderRadius: BorderRadius.circular(4),
           ),
           child: FractionallySizedBox(
@@ -618,7 +551,8 @@ class ScannedFoodDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNutrientNotProvided(String name) {
+  Widget _buildNutrientNotProvided(BuildContext context, String name) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -634,11 +568,10 @@ class ScannedFoodDetailScreen extends StatelessWidget {
           'Info not provided',
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[600],
+            color: theme.textTheme.bodyMedium?.color,
           ),
         ),
         const SizedBox(height: 12),
-        // X mark for not provided
         Container(
           height: 8,
           decoration: BoxDecoration(
@@ -684,10 +617,8 @@ class ScannedFoodDetailScreen extends StatelessWidget {
   }
 
   double _calculateNutrientLevel(String nutrientName, double value) {
-    // Handle zero values - should show no bar at all
     if (value <= 0) return 0.0;
 
-    // Define thresholds for different nutrients (per 100g)
     Map<String, Map<String, double>> thresholds = {
       'Protein': {'low': 5.0, 'high': 20.0},
       'Fats': {'low': 3.0, 'high': 17.5},
@@ -695,17 +626,17 @@ class ScannedFoodDetailScreen extends StatelessWidget {
     };
 
     final threshold = thresholds[nutrientName];
-    if (threshold == null) return 0.5; // Default to moderate if unknown
+    if (threshold == null) return 0.5;
 
     if (value <= threshold['low']!) {
       return 0.25; // Low
     } else if (value >= threshold['high']!) {
       return 1.0; // High
     } else {
-      // Calculate position between low and high
+
       final range = threshold['high']! - threshold['low']!;
       final position = (value - threshold['low']!) / range;
-      return 0.25 + (position * 0.75); // Scale between 0.25 and 1.0
+      return 0.25 + (position * 0.75);
     }
   }
 

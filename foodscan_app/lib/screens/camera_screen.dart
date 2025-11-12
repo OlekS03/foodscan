@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../logic/food_info.dart';
-import '../global_keys.dart';
 import '../services/user_preferences.dart';
 import 'scanned_food_detail_screen.dart';
 
@@ -19,7 +18,7 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   void initState() {
     super.initState();
-    _controller.stop();
+    _controller.start();
   }
 
   @override
@@ -31,17 +30,12 @@ class _CameraScreenState extends State<CameraScreen> {
   void _toggleScanning() {
     setState(() {
       _isScanning = !_isScanning;
-      if (_isScanning) {
-        _controller.start();
-      } else {
-        _controller.stop();
-      }
     });
   }
 
   void _handleBarcodeScan(String barcode) async {
     try {
-      // Show loading indicator
+
       if (!mounted) return;
       showDialog(
         context: context,
@@ -53,12 +47,10 @@ class _CameraScreenState extends State<CameraScreen> {
 
       final foodInfo = await ingredientsAndNutrimentsFromBarcode(barcode);
 
-      // Dismiss loading indicator
       if (!mounted) return;
       Navigator.of(context).pop();
 
       if (foodInfo == null) {
-        // Show error if no product found
         if (!mounted) return;
         showDialog(
           context: context,
@@ -82,7 +74,24 @@ class _CameraScreenState extends State<CameraScreen> {
       final allergenTags = foodInfo['allergen_tags'] as List<dynamic>? ?? [];
       final traces = foodInfo['traces'] as List<dynamic>? ?? [];
 
-      // Check for allergens and additives
+      final servingQuantityStr = foodInfo['serving_quantity'] as String?;
+      final servingQuantity = servingQuantityStr != null ? double.tryParse(servingQuantityStr) : null;
+
+      Map<String, dynamic> servingNutriments = {};
+
+      if (servingQuantity != null && nutriments.isNotEmpty) {
+        nutriments.forEach((key, value) {
+          if (key.endsWith('_100g') && value is num) {
+            final perServingKey = key.replaceFirst('_100g', '_serving');
+            servingNutriments[perServingKey] = (value / 100) * servingQuantity;
+          } else {
+            servingNutriments[key] = value;
+          }
+        });
+      } else {
+        servingNutriments = nutriments;
+      }
+
       final matchedAllergens = await UserPreferences.findMatchingAllergens(
         ingredients,
         allergenTags,
@@ -94,29 +103,31 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (!mounted) return;
 
-      // Show warning dialog if allergens are found
       if (matchedAllergens.isNotEmpty) {
         final shouldContinue = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (BuildContext context) {
+            final theme = Theme.of(context);
+            final isDarkMode = theme.brightness == Brightness.dark;
+
             return AlertDialog(
-              backgroundColor: Colors.grey[200],
+              backgroundColor: isDarkMode ? Colors.grey[900] : Colors.grey[200],
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.warning, color: Colors.red, size: 32),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'ALLERGIC',
                     style: TextStyle(
-                      color: Colors.red,
+                      color: isDarkMode ? Colors.red[400] : Colors.red,
                       fontWeight: FontWeight.bold,
                       fontSize: 24,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Icon(Icons.warning, color: Colors.red, size: 32),
+                  Icon(Icons.warning, color: isDarkMode ? Colors.red[400] : Colors.red, size: 32),
                 ],
               ),
               content: Column(
@@ -150,7 +161,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       Expanded(
                         child: TextButton(
                           style: TextButton.styleFrom(
-                            backgroundColor: Colors.black,
+                            backgroundColor: isDarkMode ? Colors.grey[800] : Colors.black,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -165,7 +176,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       Expanded(
                         child: TextButton(
                           style: TextButton.styleFrom(
-                            backgroundColor: Colors.black,
+                            backgroundColor: isDarkMode ? Colors.grey[800] : Colors.black,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -189,7 +200,6 @@ class _CameraScreenState extends State<CameraScreen> {
         }
       }
 
-      // Navigate to detailed food information screen
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -197,7 +207,7 @@ class _CameraScreenState extends State<CameraScreen> {
             foodName: foodName,
             companyName: foodInfo['brand'] as String?,
             ingredients: ingredients,
-            nutriments: nutriments,
+            nutriments: servingNutriments,
             allergenTags: allergenTags,
             traces: traces,
             matchedAllergens: matchedAllergens,
@@ -273,6 +283,7 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -291,36 +302,47 @@ class _CameraScreenState extends State<CameraScreen> {
             controller: _controller,
             onDetect: _onDetect,
           ),
-          if (!_isScanning)
-            Container(
-              color: Colors.black87,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.qr_code_scanner,
-                      size: 64,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Tap the scan button to begin',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _toggleScanning,
-        icon: Icon(_isScanning ? Icons.stop : Icons.qr_code_scanner),
-        label: Text(_isScanning ? 'Stop' : 'Start Scan'),
-        backgroundColor: _isScanning ? Colors.red : theme.colorScheme.primary,
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: _toggleScanning,
+          backgroundColor: _isScanning
+            ? Colors.red[600]
+            : (isDarkMode ? theme.colorScheme.primary : Colors.green[600]),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          icon: Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _isScanning ? Icons.stop_rounded : Icons.qr_code_scanner_rounded,
+              size: 24,
+            ),
+          ),
+          label: Text(
+            _isScanning ? 'Stop Scanning' : 'Start Scanning',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          extendedPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -332,7 +354,7 @@ class _CameraScreenState extends State<CameraScreen> {
     for (final barcode in barcodes) {
       if (barcode.rawValue != null) {
         _handleBarcodeScan(barcode.rawValue!);
-        _toggleScanning(); // Stop scanning after successful detection
+        _toggleScanning();
         break;
       }
     }

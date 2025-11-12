@@ -213,10 +213,24 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     final List<dynamic> allergenTags = food['allergenTags'] as List<dynamic>;
     final Map<String, Object> nutriments = food['nutriments'] as Map<String, Object>;
 
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    final cardColor = hasAllergen
+        ? (isDarkMode ? Colors.red.withOpacity(0.2) : Colors.red[100])
+        : theme.cardColor;
+
+    final textColor = hasAllergen
+        ? (isDarkMode ? Colors.red[200] : Colors.red[900])
+        : theme.textTheme.bodyLarge?.color;
+    final companyColor = hasAllergen
+        ? (isDarkMode ? Colors.red[200] : Colors.red[700])
+        : theme.textTheme.bodyMedium?.color;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: hasAllergen ? Colors.red[100] : Colors.grey[300],
+        color: cardColor,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -250,13 +264,13 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            color: hasAllergen ? Colors.red : null,
+                            color: textColor,
                           ),
                         ),
                         Text(
                           'Company Name',
                           style: TextStyle(
-                            color: hasAllergen ? Colors.red[700] : Colors.grey[600],
+                            color: companyColor,
                           ),
                         ),
                       ],
@@ -265,24 +279,25 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () => _removeFood(index),
-                    color: hasAllergen ? Colors.red : null,
+                    color: textColor,
                   ),
                   IconButton(
                     icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
                     onPressed: () => _toggleExpand(index),
-                    color: hasAllergen ? Colors.red : null,
+                    color: textColor,
                   ),
                 ],
               ),
             ),
           ),
-          // Expanded content
           if (isExpanded) ...[
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: hasAllergen ? Colors.red[100] : Colors.green[100],
+                color: hasAllergen
+                    ? (isDarkMode ? Colors.red.withOpacity(0.3) : Colors.red[100])
+                    : (isDarkMode ? Colors.green.withOpacity(0.3) : Colors.green[100]),
               ),
               child: Row(
                 children: [
@@ -362,12 +377,15 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
   }
 
   Widget _buildNutritionInfo(Map<String, Object> nutriments) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[400],
+        color: isDarkMode ? Colors.grey[800] : Colors.grey[400],
         border: Border(
-          bottom: BorderSide(color: Colors.grey[500]!, width: 1),
+          bottom: BorderSide(color: (isDarkMode ? Colors.grey[700] : Colors.grey[500])!, width: 1),
         ),
       ),
       child: Column(
@@ -404,10 +422,13 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
   }
 
   Widget _buildNutrientBox(String label, String value, String unit) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? theme.colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
@@ -438,7 +459,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
             unit,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey[600],
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
             ),
           ),
         ],
