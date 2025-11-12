@@ -1,47 +1,203 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'settings_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/user_preferences.dart';
+import 'settings_screen.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
+
   @override
   State<UserScreen> createState() => _UserScreenState();
 }
 
 class _UserScreenState extends State<UserScreen> {
-  bool allergensExpanded = false;
-  bool additivesExpanded = false;
   List<String> allergens = [];
   List<String> additives = [];
+  bool _isDarkMode = false;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadPreferences();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadPreferences() async {
     final loadedAllergens = await UserPreferences.getAllergens();
     final loadedAdditives = await UserPreferences.getAdditives();
 
-    setState(() {
-      allergens = loadedAllergens;
-      additives = loadedAdditives;
-    });
+    if (mounted) {
+      setState(() {
+        allergens = loadedAllergens;
+        additives = loadedAdditives;
+      });
+    }
   }
 
-  Future<void> _showAddDialog(String type) async {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    _isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile'),
+      ),
+      body: ListView(
+        children: [
+          _buildProfileHeader(theme),
+          const Divider(),
+          _buildPreferenceSection(
+            title: 'Allergen Alerts',
+            icon: Icons.warning_amber_rounded,
+            items: allergens,
+            onAdd: _addAllergen,
+            onRemove: _removeAllergen,
+            theme: theme,
+          ),
+          const Divider(),
+          _buildPreferenceSection(
+            title: 'Additive Alerts',
+            icon: Icons.science_rounded,
+            items: additives,
+            onAdd: _addAdditive,
+            onRemove: _removeAdditive,
+            theme: theme,
+          ),
+          const Divider(),
+          _buildSettingsSection(theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.primaryContainer,
+            ),
+            child: Icon(
+              Icons.person,
+              size: 48,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'FoodScan User',
+            style: theme.textTheme.headlineSmall,
+          ),
+          Text(
+            'Manage your food preferences',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferenceSection({
+    required String title,
+    required IconData icon,
+    required List<String> items,
+    required Function(String) onAdd,
+    required Function(String) onRemove,
+    required ThemeData theme,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(title, style: theme.textTheme.titleMedium),
+              const Spacer(),
+              TextButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Add'),
+                onPressed: () => _showAddDialog(title, onAdd),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (items.isEmpty)
+            Text(
+              'No items added',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: items.map((item) {
+                return Chip(
+                  label: Text(item),
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                  onDeleted: () => onRemove(item),
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  side: BorderSide.none,
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsSection(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.settings, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text('Settings', style: theme.textTheme.titleMedium),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.settings_applications),
+            title: const Text('App Settings'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddDialog(String title, Function(String) onAdd) async {
     String newItem = '';
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Add new $type'),
+        title: Text('Add ${title.split(" ")[0]}'),
         content: TextField(
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'Enter name',
+            hintText: 'Enter ${title.split(" ")[0].toLowerCase()}',
             border: const OutlineInputBorder(),
           ),
           onChanged: (value) => newItem = value,
@@ -54,16 +210,9 @@ class _UserScreenState extends State<UserScreen> {
           FilledButton(
             onPressed: () {
               if (newItem.isNotEmpty) {
-                setState(() {
-                  if (type == 'allergen') {
-                    allergens.add(newItem);
-                  } else {
-                    additives.add(newItem);
-                  }
-                });
-                _saveData();
+                onAdd(newItem);
+                Navigator.pop(context);
               }
-              Navigator.pop(context);
             },
             child: const Text('Add'),
           ),
@@ -72,146 +221,31 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  void _removeItem(String type, int index) {
+  void _addAllergen(String allergen) {
     setState(() {
-      if (type == 'allergen') {
-        allergens.removeAt(index);
-      } else {
-        additives.removeAt(index);
-      }
+      allergens.add(allergen);
+      UserPreferences.setAllergens(allergens);
     });
-    _saveData();
   }
 
-  Future<void> _saveData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('user_allergens', allergens);
-    await prefs.setStringList('user_additives', additives);
-
-    // Show a confirmation snackbar
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preferences saved'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+  void _removeAllergen(String allergen) {
+    setState(() {
+      allergens.remove(allergen);
+      UserPreferences.setAllergens(allergens);
+    });
   }
 
-  Widget _buildExpandableSection(
-    String title,
-    List<String> items,
-    bool isExpanded,
-    Function(bool) onExpanded,
-    Function() onAdd,
-    Function(int) onRemove,
-  ) {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).textTheme.titleLarge?.color,
-              ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Theme.of(context).iconTheme.color,
-                  ),
-                  onPressed: () => onExpanded(!isExpanded),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.add_circle,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  onPressed: onAdd,
-                ),
-              ],
-            ),
-          ),
-          if (isExpanded)
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(
-                    items[index],
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.remove_circle,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: () => onRemove(index),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
+  void _addAdditive(String additive) {
+    setState(() {
+      additives.add(additive);
+      UserPreferences.setAdditives(additives);
+    });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: ListTile(
-              leading: const CircleAvatar(
-                child: Icon(Icons.person),
-              ),
-              title: const Text('User Profile'),
-              trailing: IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildExpandableSection(
-            'Allergens',
-            allergens,
-            allergensExpanded,
-            (value) => setState(() => allergensExpanded = value),
-            () => _showAddDialog('allergen'),
-            (index) => _removeItem('allergen', index),
-          ),
-          const SizedBox(height: 8),
-          _buildExpandableSection(
-            'Additives to Avoid',
-            additives,
-            additivesExpanded,
-            (value) => setState(() => additivesExpanded = value),
-            () => _showAddDialog('additive'),
-            (index) => _removeItem('additive', index),
-          ),
-        ],
-      ),
-    );
+  void _removeAdditive(String additive) {
+    setState(() {
+      additives.remove(additive);
+      UserPreferences.setAdditives(additives);
+    });
   }
 }

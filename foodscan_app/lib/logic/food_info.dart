@@ -33,6 +33,9 @@ Future<Map<String, dynamic>?> ingredientsAndNutrimentsFromBarcode(
   final traces = product['traces_tags'] as List<dynamic>?;
   final foodName = product['product_name'] as String? ?? 'Unknown Food';
 
+  final servingSize = product['serving_size'] as String?;
+  final servingQuantity = product['serving_quantity'] as String?;
+
   List<String>? cleanedAllergenTags;
   if (allergenTags != null) {
     cleanedAllergenTags = [];
@@ -53,5 +56,7 @@ Future<Map<String, dynamic>?> ingredientsAndNutrimentsFromBarcode(
     'nutriments': nutriments,
     'allergen_tags': cleanedAllergenTags,
     'traces': traces,
+    'serving_size': servingSize,
+    'serving_quantity': servingQuantity,
   };
 }

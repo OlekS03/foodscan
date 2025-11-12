@@ -18,27 +18,23 @@ class UserPreferences {
     final userAllergens = await getAllergens();
     if (userAllergens.isEmpty) return false;
 
-    // Convert everything to lowercase for case-insensitive comparison
     final lowerIngredients = ingredients.toLowerCase();
     final lowerAllergenTags = allergenTags.map((e) => e.toString().toLowerCase()).toList();
     final lowerTraces = traces.map((e) => e.toString().toLowerCase()).toList();
     final lowerUserAllergens = userAllergens.map((e) => e.toLowerCase()).toList();
 
-    // Check if any user allergen is in the ingredients text
     for (final allergen in lowerUserAllergens) {
       if (lowerIngredients.contains(allergen)) {
         return true;
       }
     }
 
-    // Check if any user allergen matches allergen tags
     for (final allergen in lowerUserAllergens) {
       if (lowerAllergenTags.any((tag) => tag.contains(allergen))) {
         return true;
       }
     }
 
-    // Check traces
     for (final allergen in lowerUserAllergens) {
       if (lowerTraces.any((trace) => trace.contains(allergen))) {
         return true;
@@ -99,5 +95,15 @@ class UserPreferences {
     }
 
     return matches;
+  }
+
+  static Future<void> setAllergens(List<String> allergens) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_allergensKey, allergens);
+  }
+
+  static Future<void> setAdditives(List<String> additives) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_additivesKey, additives);
   }
 }

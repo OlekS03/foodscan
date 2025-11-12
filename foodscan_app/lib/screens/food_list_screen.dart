@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class FoodListScreen extends StatefulWidget {
   const FoodListScreen({super.key});
@@ -8,13 +9,24 @@ class FoodListScreen extends StatefulWidget {
   State<FoodListScreen> createState() => FoodListScreenState();
 }
 
-class FoodListScreenState extends State<FoodListScreen> {
+class FoodListScreenState extends State<FoodListScreen> with SingleTickerProviderStateMixin {
   List<Map<String, Object>> foodInfo = [];
+  late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
     _loadFoods();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _loadFoods() async {
@@ -57,7 +69,6 @@ class FoodListScreenState extends State<FoodListScreen> {
         });
       }
     } catch (e) {
-      print('Error loading foods: $e');
       if (mounted) {
         setState(() {
           foodInfo = [];
@@ -68,20 +79,10 @@ class FoodListScreenState extends State<FoodListScreen> {
 
   Map<String, Object> _parseNutriments(String nutrimentsStr) {
     try {
-      if (nutrimentsStr.isEmpty) return {};
-
-      final pairs = nutrimentsStr.split(',');
-      final map = <String, Object>{};
-      for (final pair in pairs) {
-        final keyValue = pair.split(':');
-        if (keyValue.length == 2) {
-          final value = double.tryParse(keyValue[1]) ?? keyValue[1];
-          map[keyValue[0]] = value;
-        }
-      }
-      return map;
+      // Parse the JSON string back into a Map
+      final Map<String, dynamic> decoded = jsonDecode(nutrimentsStr);
+      return Map<String, Object>.from(decoded);
     } catch (e) {
-      print('Error parsing nutriments: $e');
       return {};
     }
   }
@@ -90,17 +91,15 @@ class FoodListScreenState extends State<FoodListScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final List<String> encodedFoods = foodInfo.map((food) {
-        // Convert nutriments to string format
         final nutriments = food['nutriments'] as Map<String, Object>;
-        final nutrimentStr = nutriments.entries
-            .map((e) => '${e.key}:${e.value}')
-            .join(',');
+
+        // Convert nutriments map directly to JSON string
+        final nutrimentStr = jsonEncode(nutriments);
 
         // Convert lists to string format
         final allergenTags = (food['allergenTags'] as List).join(',');
         final traces = (food['traces'] as List).join(',');
 
-        // Create the encoded string
         return [
           food['foodName'].toString(),
           food['ingredients'].toString(),
@@ -138,11 +137,19 @@ class FoodListScreenState extends State<FoodListScreen> {
     List<dynamic> traces,
     bool hasAllergen,
   ) {
+    // Ensure nutriments are properly formatted
+    final formattedNutriments = Map<String, Object>.from({
+      'energy-kcal': nutriments['energy-kcal'] ?? 0,
+      'proteins': nutriments['proteins'] ?? 0,
+      'carbohydrates': nutriments['carbohydrates'] ?? 0,
+      'fat': nutriments['fat'] ?? 0,
+    });
+
     setState(() {
       foodInfo.add({
         'foodName': foodName as Object,
         'ingredients': ingredients as Object,
-        'nutriments': Map<String, Object>.from(nutriments),
+        'nutriments': formattedNutriments,
         'allergenTags': allergenTags.map((e) => e as Object).toList(),
         'traces': traces.map((e) => e as Object).toList(),
         'hasAllergen': hasAllergen as Object,
@@ -178,108 +185,300 @@ class FoodListScreenState extends State<FoodListScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Food List'),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        ),
-        body: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: foodInfo.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.no_food,
-                        size: 64,
-                        color: Theme.of(context).textTheme.bodyLarge?.color?.withAlpha(128),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No foods added yet',
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodyLarge?.color?.withAlpha(128),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-                  itemCount: foodInfo.length,
-                  itemBuilder: (context, i) {
-                    final food = foodInfo[i];
-                    var cardColor = isDarkMode
-                        ? Theme.of(context).cardColor
-                        : Colors.blue[50];
-
-                    if (food['hasAllergen'] == true) {
-                      cardColor = isDarkMode
-                          ? const Color.fromARGB(255, 182, 35, 30)
-                          : const Color.fromARGB(255, 255, 200, 200);
-                    }
-
-                    return Card(
-                      color: cardColor,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        children: [
-                          ListTile(
-                            title: Text(
-                              food['foodName'] as String,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).textTheme.titleLarge?.color,
-                              ),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    food['expanded'] as bool ? Icons.expand_less : Icons.expand_more,
-                                    color: isDarkMode ? Colors.tealAccent : Colors.yellow[700],
-                                  ),
-                                  onPressed: () => _toggleExpand(i),
-                                ),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.remove_circle,
-                                    color: isDarkMode ? Colors.redAccent : Colors.red,
-                                  ),
-                                  onPressed: () => _removeFood(i),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (food['expanded'] as bool) ...[
-                            _buildInfoSection('Ingredients', food['ingredients'] as String),
-                            if ((food['allergenTags'] as List).isNotEmpty)
-                              _buildInfoSection('Allergens', (food['allergenTags'] as List).join(', ')),
-                            if ((food['traces'] as List).isNotEmpty)
-                              _buildInfoSection('May Contain', (food['traces'] as List).join(', ')),
-                            if ((food['nutriments'] as Map).isNotEmpty)
-                              _buildInfoSection('Nutrition', _formatNutriments(food['nutriments'] as Map<String, dynamic>)),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Food List is Currently Empty',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Scan a food product and add it\nto see it here',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ],
       ),
     );
   }
 
-  String _formatNutriments(Map<String, dynamic> nutriments) {
-    return nutriments.entries
-        .map((e) => '${e.key}: ${e.value}')
-        .join('\n');
+  Widget _buildFoodItem(Map<String, Object> food, int index) {
+    final bool isExpanded = food['expanded'] as bool;
+    final bool hasAllergen = food['hasAllergen'] as bool;
+    final String foodName = food['foodName'] as String;
+    final String ingredients = food['ingredients'] as String;
+    final List<dynamic> allergenTags = food['allergenTags'] as List<dynamic>;
+    final Map<String, Object> nutriments = food['nutriments'] as Map<String, Object>;
+
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    final cardColor = hasAllergen
+        ? (isDarkMode ? Colors.red.withOpacity(0.2) : Colors.red[100])
+        : theme.cardColor;
+
+    final textColor = hasAllergen
+        ? (isDarkMode ? Colors.red[200] : Colors.red[900])
+        : theme.textTheme.bodyLarge?.color;
+    final companyColor = hasAllergen
+        ? (isDarkMode ? Colors.red[200] : Colors.red[700])
+        : theme.textTheme.bodyMedium?.color;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          // Food item header
+          InkWell(
+            onTap: () => _toggleExpand(index),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Placeholder for food image
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.image_not_supported, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          foodName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: textColor,
+                          ),
+                        ),
+                        Text(
+                          'Company Name',
+                          style: TextStyle(
+                            color: companyColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => _removeFood(index),
+                    color: textColor,
+                  ),
+                  IconButton(
+                    icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+                    onPressed: () => _toggleExpand(index),
+                    color: textColor,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: hasAllergen
+                    ? (isDarkMode ? Colors.red.withOpacity(0.3) : Colors.red[100])
+                    : (isDarkMode ? Colors.green.withOpacity(0.3) : Colors.green[100]),
+              ),
+              child: Row(
+                children: [
+                  if (hasAllergen) ...[
+                    const Icon(Icons.warning, color: Colors.red),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'ALLERGIC',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ] else ...[
+                    const Icon(Icons.check_circle, color: Colors.green),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'NOT ALLERGIC',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            _buildNutritionInfo(nutriments),
+            _buildAdditiveSection(),
+            _buildInfoSection('Ingredients:', ingredients),
+            if (allergenTags.isNotEmpty)
+              _buildInfoSection('Allergens:', allergenTags.join(', ')),
+            const SizedBox(height: 16),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdditiveSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Additives (WIP)',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const Text('Low amount of additives (WIP)'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('Low'),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  height: 8,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.green[300]!,
+                        Colors.yellow[300]!,
+                        Colors.red[300]!,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const Text('High'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNutritionInfo(Map<String, Object> nutriments) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[800] : Colors.grey[400],
+        border: Border(
+          bottom: BorderSide(color: (isDarkMode ? Colors.grey[700] : Colors.grey[500])!, width: 1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Nutrition Information',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNutrientBox('Calories',
+                nutriments['energy-kcal']?.toString() ?? '0',
+                'kcal'),
+              _buildNutrientBox('Protein',
+                nutriments['proteins']?.toString() ?? '0',
+                'g'),
+              _buildNutrientBox('Carbs',
+                nutriments['carbohydrates']?.toString() ?? '0',
+                'g'),
+              _buildNutrientBox('Fat',
+                nutriments['fat']?.toString() ?? '0',
+                'g'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNutrientBox(String label, String value, String unit) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? theme.colorScheme.surface : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            unit,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Food List'),
+      ),
+      body: foodInfo.isEmpty
+        ? _buildEmptyState()
+        : ListView.builder(
+            itemCount: foodInfo.length,
+            itemBuilder: (context, index) => _buildFoodItem(foodInfo[index], index),
+          ),
+    );
   }
 }
