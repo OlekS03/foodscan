@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/user_preferences.dart';
 import 'dart:convert';
 
 class FoodListScreen extends StatefulWidget {
@@ -12,6 +13,12 @@ class FoodListScreen extends StatefulWidget {
 class FoodListScreenState extends State<FoodListScreen> with SingleTickerProviderStateMixin {
   List<Map<String, Object>> foodInfo = [];
   late AnimationController _controller;
+
+  
+  Future<void> reloadFoods() async {
+    await _loadFoods();
+  }
+
 
   @override
   void initState() {
@@ -29,7 +36,25 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     super.dispose();
   }
 
+  Future<void> refreshFoodAllergens() async {
+    for (var food in foodInfo) {
+      final ingredients = food['ingredients'] as String;
+      final allergenTags = food['allergenTags'] as List<dynamic>;
+      final traces = food['traces'] as List<dynamic>;
+
+      final matchedAllergens = await UserPreferences.findMatchingAllergens(ingredients, allergenTags, traces);
+      final matchedAdditives = await UserPreferences.findMatchingAdditives(ingredients);
+
+      food['hasAllergen'] = matchedAllergens.isNotEmpty;
+      food['hasAdditive'] = matchedAdditives.isNotEmpty;
+    }
+
+    setState(() {});
+    await _saveFoods();
+  }
+
   Future<void> _loadFoods() async {
+    await refreshFoodAllergens();
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedFoods = prefs.getStringList('foods_list');
 
@@ -56,6 +81,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
           'traces': parts.length > 4 ?
             (parts[4].isEmpty ? <Object>[] : parts[4].split(',').map((e) => e as Object).toList()) : <Object>[],
           'hasAllergen': parts.length > 5 ? parts[5].toLowerCase() == 'true' : false,
+          'hasAdditive': parts.length > 6 ? parts[6].toLowerCase() == 'true' : false,
           'expanded': false,
         };
       })
@@ -107,6 +133,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
           allergenTags,
           traces,
           food['hasAllergen'].toString(),
+          food['hasAdditive'].toString(),
         ].join('|');
       }).toList();
 
@@ -208,6 +235,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
   Widget _buildFoodItem(Map<String, Object> food, int index) {
     final bool isExpanded = food['expanded'] as bool;
     final bool hasAllergen = food['hasAllergen'] as bool;
+    final bool hasAdditive = food['hasAdditive'] as bool;
     final String foodName = food['foodName'] as String;
     final String ingredients = food['ingredients'] as String;
     final List<dynamic> allergenTags = food['allergenTags'] as List<dynamic>;
@@ -218,14 +246,19 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
 
     final cardColor = hasAllergen
         ? (isDarkMode ? Colors.red.withOpacity(0.2) : Colors.red[100])
-        : theme.cardColor;
-
+        :hasAdditive
+            ? (isDarkMode ? Colors.orange.withOpacity(0.2) : Colors.orange[100])
+            : theme.cardColor;
     final textColor = hasAllergen
         ? (isDarkMode ? Colors.red[200] : Colors.red[900])
-        : theme.textTheme.bodyLarge?.color;
+        :hasAdditive
+            ? (isDarkMode ? Colors.orange[200] : Colors.orange[900])
+            : theme.textTheme.bodyLarge?.color;
     final companyColor = hasAllergen
         ? (isDarkMode ? Colors.red[200] : Colors.red[700])
-        : theme.textTheme.bodyMedium?.color;
+        :hasAdditive
+            ? (isDarkMode ? Colors.orange[200] : Colors.orange[700])
+            : theme.textTheme.bodyMedium?.color;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -297,7 +330,9 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
               decoration: BoxDecoration(
                 color: hasAllergen
                     ? (isDarkMode ? Colors.red.withOpacity(0.3) : Colors.red[100])
-                    : (isDarkMode ? Colors.green.withOpacity(0.3) : Colors.green[100]),
+                    : hasAdditive
+                        ? (isDarkMode ? Colors.orange.withOpacity(0.3) : Colors.orange[100])
+                        : (isDarkMode ? Colors.green.withOpacity(0.3) : Colors.green[100]),
               ),
               child: Row(
                 children: [
@@ -308,6 +343,16 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
                       'ALLERGIC',
                       style: TextStyle(
                         color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ] else if (hasAdditive) ...[
+                    const Icon(Icons.warning, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'CONTAINS UNWANTED ADDITIVES',
+                      style: TextStyle(
+                        color: Colors.orange,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

@@ -46,9 +46,14 @@ class _MainScaffoldState extends State<MainScaffold> {
   final FoodListScreen _foodListScreen = FoodListScreen(key: foodListKey);
   final CameraScreen _cameraScreen = const CameraScreen();
   final UserScreen _userScreen = const UserScreen();
-
+  
   void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
+    setState(() {
+      _selectedIndex = index;
+      if (_selectedIndex == 0) {
+        foodListKey.currentState?.reloadFoods();
+      }
+    });
   }
 
   @override
