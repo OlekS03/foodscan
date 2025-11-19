@@ -22,6 +22,27 @@ class _UserScreenState extends State<UserScreen> {
     _loadPreferences();
   }
 
+  Future<bool> _confirmRemoval(String item) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Remove Item"),
+        content: Text("Do you want to remove \"$item\"?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("No"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes"),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+
   Future<void> _loadPreferences() async {
     final loadedAllergens = await UserPreferences.getAllergens();
     final loadedAdditives = await UserPreferences.getAdditives();
@@ -146,7 +167,10 @@ class _UserScreenState extends State<UserScreen> {
                 return Chip(
                   label: Text(item),
                   deleteIcon: const Icon(Icons.close, size: 18),
-                  onDeleted: () => onRemove(item),
+                  onDeleted: () async {
+                    final confirm = await _confirmRemoval(item);
+                    if (confirm) onRemove(item);
+                  },
                   backgroundColor: theme.colorScheme.primaryContainer,
                   side: BorderSide.none,
                 );
