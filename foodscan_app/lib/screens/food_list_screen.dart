@@ -19,6 +19,74 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     await _loadFoods();
   }
 
+  bool _isFilterOpen = false;
+
+  String? _selectedSort;
+  bool _filterAllergens = false;
+  bool _filterAdditives = false;
+  bool _filterSafe = false;
+
+  List<Map<String, Object>> _getFilteredSortedFoods() {
+    List<Map<String, Object>> filtered = List.from(foodInfo);
+
+    filtered = filtered.where((food) {
+      final hasAllergen = food['hasAllergen'] as bool;
+      final hasAdditive = food['hasAdditive'] as bool;
+
+      bool show = false;
+
+      if (!(_filterAdditives || _filterAllergens || _filterSafe) ) {
+        show = true;
+      }
+
+      if (_filterAllergens && hasAllergen) {
+        show = true;
+      }
+
+      if (_filterAdditives && hasAdditive) {
+        show = true;
+      }
+
+      if (_filterSafe && !hasAllergen && !hasAdditive) {
+        show = true;
+      }
+
+      return show;
+    }).toList();
+
+
+    if (_selectedSort == "az") {
+      filtered.sort((a, b) =>
+          (a['foodName'] as String).toLowerCase().compareTo((b['foodName'] as String).toLowerCase()));
+    } else if (_selectedSort == "za") {
+      filtered.sort((a, b) =>
+          (b['foodName'] as String).toLowerCase().compareTo((a['foodName'] as String).toLowerCase()));
+    }
+
+    return filtered;
+  }
+
+  Future<bool> _confirmRemoval(String foodName) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Remove Item"),
+        content: Text("Do you want to remove \"$foodName\"?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("No"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes"),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+
 
   @override
   void initState() {
@@ -54,7 +122,6 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
   }
 
   Future<void> _loadFoods() async {
-    await refreshFoodAllergens();
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedFoods = prefs.getStringList('foods_list');
 
@@ -94,6 +161,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
           foodInfo = loadedFoods;
         });
       }
+      await refreshFoodAllergens();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -143,15 +211,15 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     }
   }
 
-  void _toggleExpand(int index) {
+  void _toggleExpand(Map<String, Object> food) {
     setState(() {
-      foodInfo[index]['expanded'] = !(foodInfo[index]['expanded'] as bool);
+      food['expanded'] = !(food['expanded'] as bool);
     });
   }
 
-  void _removeFood(int index) {
+  void _removeFood(Map<String, Object> food) {
     setState(() {
-      foodInfo.removeAt(index);
+      foodInfo.remove(food); 
       _saveFoods();
     });
   }
@@ -184,6 +252,99 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
       });
     });
     _saveFoods();
+  }
+
+  Widget _buildFilterDropdown() {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Sort",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          RadioListTile<String>(
+            title: const Text("A → Z"),
+            value: "az",
+            groupValue: _selectedSort,
+            onChanged: (v) {
+              setState(() => _selectedSort = v);
+            },
+          ),
+          RadioListTile<String>(
+            title: const Text("Z → A"),
+            value: "za",
+            groupValue: _selectedSort,
+            onChanged: (v) {
+              setState(() => _selectedSort = v);
+            },
+          ),
+
+          const SizedBox(height: 12),
+          const Text(
+            "Filters",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          CheckboxListTile(
+            title: const Text("Show items with allergens"),
+            value: _filterAllergens,
+            onChanged: (v) {
+              setState(() => _filterAllergens = v!);
+            },
+          ),
+          CheckboxListTile(
+            title: const Text("Show items with additives"),
+            value: _filterAdditives,
+            onChanged: (v) {
+              setState(() => _filterAdditives = v!);
+            },
+          ),
+          CheckboxListTile(
+            title: const Text("Show safe foods"),
+            value: _filterSafe,
+            onChanged: (v) {
+              setState(() => _filterSafe = v!);
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                "Save",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                setState(() {
+                  _isFilterOpen = false;
+                  _getFilteredSortedFoods();
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildInfoSection(String title, String content) {
@@ -270,7 +431,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
         children: [
           // Food item header
           InkWell(
-            onTap: () => _toggleExpand(index),
+            onTap: () => _toggleExpand(food),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -311,12 +472,16 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
-                    onPressed: () => _removeFood(index),
+                    onPressed: () async {
+                      final confirm = await _confirmRemoval(foodName);
+                      if (confirm) _removeFood(food);
+
+                    }, 
                     color: textColor,
                   ),
                   IconButton(
                     icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
-                    onPressed: () => _toggleExpand(index),
+                    onPressed: () => _toggleExpand(food),
                     color: textColor,
                   ),
                 ],
@@ -517,13 +682,36 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     return Scaffold(
       appBar: AppBar(
         title: const Text('Food List'),
-      ),
-      body: foodInfo.isEmpty
-        ? _buildEmptyState()
-        : ListView.builder(
-            itemCount: foodInfo.length,
-            itemBuilder: (context, index) => _buildFoodItem(foodInfo[index], index),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () {
+              setState(() {
+                _isFilterOpen = !_isFilterOpen;
+              });
+            },
           ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_isFilterOpen) _buildFilterDropdown(),
+
+          Container(
+            height: 1,
+            color: Colors.black,
+          ),
+          Expanded(
+            child: _getFilteredSortedFoods().isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    itemCount: _getFilteredSortedFoods().length,
+                    itemBuilder: (context, index) =>
+                        _buildFoodItem(_getFilteredSortedFoods()[index], index),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
