@@ -24,18 +24,36 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
   String? _selectedSort;
   bool _filterAllergens = false;
   bool _filterAdditives = false;
+  bool _filterSafe = false;
 
   List<Map<String, Object>> _getFilteredSortedFoods() {
     List<Map<String, Object>> filtered = List.from(foodInfo);
 
-    if (_filterAllergens || _filterAdditives) {
-      filtered = filtered.where((food) {
-        final hasAllergen = food['hasAllergen'] as bool;
-        final hasAdditive = food['hasAdditive'] as bool;
+    filtered = filtered.where((food) {
+      final hasAllergen = food['hasAllergen'] as bool;
+      final hasAdditive = food['hasAdditive'] as bool;
 
-        return (_filterAllergens && hasAllergen) || (_filterAdditives && hasAdditive);
-      }).toList();
-    }
+      bool show = false;
+
+      if (!(_filterAdditives || _filterAllergens || _filterSafe) ) {
+        show = true;
+      }
+
+      if (_filterAllergens && hasAllergen) {
+        show = true;
+      }
+
+      if (_filterAdditives && hasAdditive) {
+        show = true;
+      }
+
+      if (_filterSafe && !hasAllergen && !hasAdditive) {
+        show = true;
+      }
+
+      return show;
+    }).toList();
+
 
     if (_selectedSort == "az") {
       filtered.sort((a, b) =>
@@ -104,7 +122,6 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
   }
 
   Future<void> _loadFoods() async {
-    await refreshFoodAllergens();
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedFoods = prefs.getStringList('foods_list');
 
@@ -144,6 +161,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
           foodInfo = loadedFoods;
         });
       }
+      await refreshFoodAllergens();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -199,9 +217,9 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     });
   }
 
-  void _removeFood(int index) {
+  void _removeFood(Map<String, Object> food) {
     setState(() {
-      foodInfo.removeAt(index);
+      foodInfo.remove(food); 
       _saveFoods();
     });
   }
@@ -293,6 +311,13 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
             value: _filterAdditives,
             onChanged: (v) {
               setState(() => _filterAdditives = v!);
+            },
+          ),
+          CheckboxListTile(
+            title: const Text("Show safe foods"),
+            value: _filterSafe,
+            onChanged: (v) {
+              setState(() => _filterSafe = v!);
             },
           ),
 
@@ -449,7 +474,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () async {
                       final confirm = await _confirmRemoval(foodName);
-                      if (confirm) _removeFood(index);
+                      if (confirm) _removeFood(food);
 
                     }, 
                     color: textColor,
