@@ -152,7 +152,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: isAllergic ? Colors.red : Colors.black,
+                              color: isAllergic ? Colors.red : Colors.green,
                             ),
                           ),
                           const Spacer(),
@@ -401,8 +401,8 @@ class ScannedFoodDetailScreen extends StatelessWidget {
 
   double _calculateAdditiveLevel() {
     if (matchedAdditives.isEmpty) return 0.2;
-    if (matchedAdditives.length <= 2) return 0.4; //
-    if (matchedAdditives.length <= 4) return 0.7; //
+    if (matchedAdditives.length <= 2) return 0.4;
+    if (matchedAdditives.length <= 4) return 0.7;
     return 1.0;
   }
 
@@ -629,9 +629,9 @@ class ScannedFoodDetailScreen extends StatelessWidget {
     if (threshold == null) return 0.5;
 
     if (value <= threshold['low']!) {
-      return 0.25; // Low
+      return 0.25;
     } else if (value >= threshold['high']!) {
-      return 1.0; // High
+      return 1.0;
     } else {
 
       final range = threshold['high']! - threshold['low']!;
