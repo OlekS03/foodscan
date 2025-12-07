@@ -103,7 +103,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (!mounted) return;
 
-      if (matchedAllergens.isNotEmpty) {
+      if (matchedAllergens.isNotEmpty || matchedAdditives.isNotEmpty) {
         final shouldContinue = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
@@ -116,25 +116,37 @@ class _CameraScreenState extends State<CameraScreen> {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.warning, color: Colors.red, size: 32),
+                  Icon(
+                    Icons.warning,
+                    color: matchedAllergens.isNotEmpty ? Colors.red : Colors.orange,
+                    size: 32,
+                  ),
                   const SizedBox(width: 10),
                   Text(
-                    'ALLERGIC',
+                    matchedAllergens.isNotEmpty ? 'ALLERGIC' : 'Contains Additives',
                     style: TextStyle(
-                      color: isDarkMode ? Colors.red[400] : Colors.red,
+                      color: matchedAllergens.isNotEmpty
+                          ? (isDarkMode ? Colors.red[400] : Colors.red)
+                          : (isDarkMode ? Colors.orange[400] : Colors.orange),
                       fontWeight: FontWeight.bold,
                       fontSize: 24,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Icon(Icons.warning, color: isDarkMode ? Colors.red[400] : Colors.red, size: 32),
+                  Icon(
+                    Icons.warning,
+                    color: matchedAllergens.isNotEmpty ? Colors.red : Colors.orange,
+                    size: 32,
+                  ),
                 ],
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'CONTAINS:\n"${matchedAllergens.join('", "')}"',
+                    matchedAllergens.isNotEmpty
+                        ? ('CONTAINS:\n"${matchedAllergens.join('", "')}"')
+                        : ('CONTAINS:\n"${matchedAdditives.join('", "')}"'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 18,
