@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/user_preferences.dart';
 import 'settings_screen.dart';
+import 'tutorial_image_screen.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -14,12 +15,17 @@ class UserScreen extends StatefulWidget {
 class _UserScreenState extends State<UserScreen> {
   List<String> allergens = [];
   List<String> additives = [];
-  bool _isDarkMode = false;
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    allergens = await UserPreferences.getAllergens();
+    additives = await UserPreferences.getAdditives();
+    if (mounted) setState(() {});
   }
 
   Future<bool> _confirmRemoval(String item) async {
@@ -30,40 +36,25 @@ class _UserScreenState extends State<UserScreen> {
         content: Text("Do you want to remove \"$item\"?"),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
             child: const Text("No"),
+            onPressed: () => Navigator.pop(context, false),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
             child: const Text("Yes"),
+            onPressed: () => Navigator.pop(context, true),
           ),
         ],
       ),
-    ) ?? false;
-  }
-
-
-  Future<void> _loadPreferences() async {
-    final loadedAllergens = await UserPreferences.getAllergens();
-    final loadedAdditives = await UserPreferences.getAdditives();
-
-    if (mounted) {
-      setState(() {
-        allergens = loadedAllergens;
-        additives = loadedAdditives;
-      });
-    }
+    ) ??
+        false;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    _isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
+      appBar: AppBar(title: const Text("Profile")),
       body: ListView(
         children: [
           _buildProfileHeader(theme),
@@ -110,10 +101,7 @@ class _UserScreenState extends State<UserScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            'FoodScan User',
-            style: theme.textTheme.headlineSmall,
-          ),
+          Text('FoodScan User', style: theme.textTheme.headlineSmall),
           Text(
             'Manage your food preferences',
             style: theme.textTheme.bodyLarge?.copyWith(
@@ -168,11 +156,9 @@ class _UserScreenState extends State<UserScreen> {
                   label: Text(item),
                   deleteIcon: const Icon(Icons.close, size: 18),
                   onDeleted: () async {
-                    final confirm = await _confirmRemoval(item);
-                    if (confirm) onRemove(item);
+                    if (await _confirmRemoval(item)) onRemove(item);
                   },
                   backgroundColor: theme.colorScheme.primaryContainer,
-                  side: BorderSide.none,
                 );
               }).toList(),
             ),
@@ -195,6 +181,10 @@ class _UserScreenState extends State<UserScreen> {
             ],
           ),
           const SizedBox(height: 16),
+
+          // ----------------------------------------------------------
+          // EXISTING APP SETTINGS BUTTON
+          // ----------------------------------------------------------
           ListTile(
             leading: const Icon(Icons.settings_applications),
             title: const Text('App Settings'),
@@ -203,6 +193,23 @@ class _UserScreenState extends State<UserScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+
+          const SizedBox(height: 8),
+
+          // ----------------------------------------------------------
+          // NEW TUTORIAL BUTTON INSIDE SETTINGS SECTION
+          // ----------------------------------------------------------
+          ListTile(
+            leading: const Icon(Icons.menu_book_rounded),
+            title: const Text('Tutorial'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorialImageScreen()),
               );
             },
           ),
@@ -228,17 +235,17 @@ class _UserScreenState extends State<UserScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
           ),
           FilledButton(
+            child: const Text('Add'),
             onPressed: () {
               if (newItem.isNotEmpty) {
                 onAdd(newItem);
                 Navigator.pop(context);
               }
             },
-            child: const Text('Add'),
           ),
         ],
       ),
