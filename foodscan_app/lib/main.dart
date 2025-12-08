@@ -45,7 +45,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   final FoodListScreen _foodListScreen = FoodListScreen(key: foodListKey);
   final CameraScreen _cameraScreen = const CameraScreen();
-  final UserScreen _userScreen = const UserScreen();
+  final UserScreen _userScreen = UserScreen(key: userScreenKey);
   
   void _onItemTapped(int index) {
     setState(() {
@@ -54,6 +54,10 @@ class _MainScaffoldState extends State<MainScaffold> {
         foodListKey.currentState?.reloadFoods();
       }
     });
+  
+  if (index == 2) {
+      userScreenKey.currentState?.checkProfileUserPopup();
+    }
   }
 
   @override

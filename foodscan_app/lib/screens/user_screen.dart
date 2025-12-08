@@ -8,10 +8,10 @@ class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
 
   @override
-  State<UserScreen> createState() => _UserScreenState();
+  State<UserScreen> createState() => UserScreenState();
 }
 
-class _UserScreenState extends State<UserScreen> {
+class UserScreenState extends State<UserScreen> {
   List<String> allergens = [];
   List<String> additives = [];
   bool _isDarkMode = false;
@@ -21,6 +21,68 @@ class _UserScreenState extends State<UserScreen> {
     super.initState();
     _loadPreferences();
   }
+
+  void checkProfileUserPopup() async {
+    bool isNew = await UserPreferences.isNewUserProfile();
+
+    if (isNew && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            final theme = Theme.of(context);
+            final isDarkMode = theme.brightness == Brightness.dark;
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Center(
+                child: Text(
+                  "WELCOME!",
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text(
+                    'Here you can add your known allergens and unwanted additives, and we will alert you when you scan a food containing them.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDarkMode ? Colors.tealAccent[700] : Colors.green[600],
+                    foregroundColor: Colors.white,
+                    elevation: 5,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    await UserPreferences.setNewUserProfileFalse();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      });
+    }
+  }
+
 
   Future<bool> _confirmRemoval(String item) async {
     return await showDialog(

@@ -9,6 +9,36 @@ class UserPreferences {
     return prefs.getStringList(_allergensKey) ?? [];
   }
 
+  static Future<bool> isNewUserCam() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('newUserCam') ?? true;
+  }
+
+  static Future<void> setNewUserCamFalse() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('newUserCam', false);
+  }
+
+  static Future<bool> isFirstFoodSaved() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('firstFoodSaved') ?? true;
+  }
+
+  static Future<void> setFirstFoodSavedFalse() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('firstFoodSaved', false);
+  }
+
+  static Future<bool> isNewUserProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('newUserProfile') ?? true;
+  }
+
+  static Future<void> setNewUserProfileFalse() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('newUserProfile', false);
+  }
+
   static Future<List<String>> getAdditives() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_additivesKey) ?? [];

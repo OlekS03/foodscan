@@ -19,12 +19,130 @@ class _CameraScreenState extends State<CameraScreen> {
   void initState() {
     super.initState();
     _controller.start();
+    _checkNewUserPopup();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void showCongratulationsPopup(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          final theme = Theme.of(context);
+          final isDarkMode = theme.brightness == Brightness.dark;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Center(
+              child: Text(
+                "CONGRATULATIONS!",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text(
+                  'After you save any food, you can navigate to your "Food List" to see it again.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18),
+                ),
+              ],
+            ),
+            actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDarkMode ? Colors.tealAccent[700] : Colors.green[600],
+                  foregroundColor: Colors.white,
+                  elevation: 5,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text(
+                  "OK",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    });
+  }
+
+  void _checkNewUserPopup() async {
+    bool isNew = await UserPreferences.isNewUserCam();
+
+    if (isNew && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            final theme = Theme.of(context);
+            final isDarkMode = theme.brightness == Brightness.dark;
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Center(
+                child: Text(
+                  "HELLO NEW USER!",
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text(
+                    'We see this is your first time scanning! Navigate to the "Profile" tab to get started.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 15),
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDarkMode ? Colors.tealAccent[700] : Colors.green[600],
+                    foregroundColor: Colors.white,
+                    elevation: 5,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    await UserPreferences.setNewUserCamFalse();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      });
+    }
   }
 
   void _toggleScanning() {
@@ -177,11 +295,14 @@ class _CameraScreenState extends State<CameraScreen> {
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          onPressed: () => Navigator.of(context).pop(true),
+                          onPressed: () async {
+                            Navigator.of(context).pop(true);
+                          },
                           child: const Text(
                             'YES',
-                            style: TextStyle(fontSize: 18),
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
+
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -227,7 +348,13 @@ class _CameraScreenState extends State<CameraScreen> {
             imageUrl: foodInfo['image_url'] as String?,
           ),
         ),
-      );
+      ).then((_) async {
+        bool firstTime = await UserPreferences.isFirstFoodSaved();
+        if (firstTime) {
+          await UserPreferences.setFirstFoodSavedFalse();
+          showCongratulationsPopup(context);
+        }
+      });
     } catch (e) {
       // Dismiss loading indicator if it's showing
       if (mounted && Navigator.of(context).canPop()) {

@@ -591,7 +591,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
               ),
             ),
 
-            const SizedBox(height: 1),
+            Container(height: 1, color: Colors.black),
 
             ..._buildMacroNutrientBars(context, nutriments),
 
@@ -736,8 +736,11 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
  List<Widget> _buildMacroNutrientBars(BuildContext context, Map<String, dynamic> nutriments) {
     return [
       _buildNutrientBar(context, 'Protein', 'proteins_serving', 'proteins_100g', 'proteins', nutriments),
+      Container(height: 1, color: Colors.black),
       _buildNutrientBar(context, 'Fats', 'fat_serving', 'fat_100g', 'fat', nutriments),
+      Container(height: 1, color: Colors.black),
       _buildNutrientBar(context, 'Carbs', 'carbohydrates_serving', 'carbohydrates_100g', 'carbohydrates', nutriments),
+      Container(height: 1, color: Colors.black),
     ];
   }
 
