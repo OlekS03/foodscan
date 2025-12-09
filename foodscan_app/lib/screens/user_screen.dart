@@ -23,6 +23,7 @@ class UserScreenState extends State<UserScreen> {
   }
 
   void checkProfileUserPopup() async {
+    
     bool isNew = await UserPreferences.isNewUserProfile();
 
     if (isNew && mounted) {

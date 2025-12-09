@@ -465,7 +465,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
         return ' kcal';
       case 'sodium':
       case 'salt':
-        return ' mg';
+        return ' g';
       default:
         return 'g';
     }

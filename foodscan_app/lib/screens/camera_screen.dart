@@ -222,10 +222,10 @@ class _CameraScreenState extends State<CameraScreen> {
       if (!mounted) return;
 
       if (matchedAllergens.isNotEmpty || matchedAdditives.isNotEmpty) {
-        final shouldContinue = await showDialog<bool>(
+        final bool shouldContinue = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
-          builder: (BuildContext context) {
+          builder: (BuildContext dialogcontext) {
             final theme = Theme.of(context);
             final isDarkMode = theme.brightness == Brightness.dark;
 
@@ -296,7 +296,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           onPressed: () async {
-                            Navigator.of(context).pop(true);
+                            Navigator.of(dialogcontext).pop(true);
                           },
                           child: const Text(
                             'YES',
@@ -313,7 +313,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          onPressed: () => Navigator.of(context).pop(false),
+                          onPressed: () => Navigator.of(dialogcontext).pop(false),
                           child: const Text(
                             'NO',
                             style: TextStyle(fontSize: 18),
@@ -326,14 +326,13 @@ class _CameraScreenState extends State<CameraScreen> {
               ],
             );
           },
-        );
+        ) ?? false;
 
         if (shouldContinue != true) {
           return;
         }
       }
-
-      Navigator.push(
+      Navigator.push<bool>(
         context,
         MaterialPageRoute(
           builder: (context) => ScannedFoodDetailScreen(
@@ -350,10 +349,11 @@ class _CameraScreenState extends State<CameraScreen> {
         ),
       ).then((_) async {
         bool firstTime = await UserPreferences.isFirstFoodSaved();
-        if (firstTime) {
+        if (firstTime && mounted) {
           await UserPreferences.setFirstFoodSavedFalse();
           showCongratulationsPopup(context);
         }
+
       });
     } catch (e) {
       // Dismiss loading indicator if it's showing

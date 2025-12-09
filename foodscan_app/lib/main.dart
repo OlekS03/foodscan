@@ -5,6 +5,7 @@ import 'screens/camera_screen.dart';
 import 'screens/user_screen.dart';
 import 'providers/theme_provider.dart';
 import 'global_keys.dart';
+import '../services/user_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,15 +48,16 @@ class _MainScaffoldState extends State<MainScaffold> {
   final CameraScreen _cameraScreen = const CameraScreen();
   final UserScreen _userScreen = UserScreen(key: userScreenKey);
   
-  void _onItemTapped(int index) {
+  Future<void> _onItemTapped(int index) async {
     setState(() {
       _selectedIndex = index;
       if (_selectedIndex == 0) {
         foodListKey.currentState?.reloadFoods();
       }
     });
-  
-  if (index == 2) {
+
+    bool isNew = await UserPreferences.isNewUserProfile();
+    if (index == 2 && isNew) {
       userScreenKey.currentState?.checkProfileUserPopup();
     }
   }
