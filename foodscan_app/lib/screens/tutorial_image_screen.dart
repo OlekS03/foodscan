@@ -6,14 +6,21 @@ class TutorialImageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Tutorial")),
+      appBar: AppBar(
+        title: const Text("Tutorial"),
+      ),
 
-      body: Center(
-        child: InteractiveViewer(
-          maxScale: 5,
-          child: Image.asset(
-            'assets/tutorial/tutorial.png',  // <-- your PNG here
-            fit: BoxFit.contain,
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          '''
+Welcome to the FoodScan Tutorial!
+
+Display text in tutorial screen
+          ''',
+          style: TextStyle(
+            fontSize: 18,
+            height: 1.4,
           ),
         ),
       ),
