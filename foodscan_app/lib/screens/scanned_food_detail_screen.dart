@@ -323,7 +323,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                                         traces,
                                         matchedAllergens.isNotEmpty || matchedAdditives.isNotEmpty,
                                       );
-                                      Navigator.pop(context);
+                                      Navigator.pop(context, true);
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.black,

@@ -3,6 +3,12 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../logic/food_info.dart';
 import '../services/user_preferences.dart';
 import 'scanned_food_detail_screen.dart';
+import 'user_screen.dart';
+import 'package:foodscan_app/main.dart';
+import 'package:foodscan_app/global_keys.dart';
+
+
+
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -110,7 +116,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: const [
                   Text(
-                    'We see this is your first time scanning! Navigate to the "Profile" tab to get started.',
+                    'We see this is your first time scanning! Navigate to the "Profile" tab to get started by adding your known allergens',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 15),
                   ),
@@ -118,6 +124,17 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
               actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
               actions: [
+                TextButton(
+                  onPressed: ()async {
+                    await UserPreferences.setNewUserCamFalse();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    "Not Now",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isDarkMode ? Colors.tealAccent[700] : Colors.green[600],
@@ -131,6 +148,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   onPressed: () async {
                     await UserPreferences.setNewUserCamFalse();
                     Navigator.of(context).pop();
+                    mainScaffoldKey.currentState?.switchToProfileTab();
                   },
                   child: const Text(
                     "OK",
@@ -225,7 +243,7 @@ class _CameraScreenState extends State<CameraScreen> {
         final bool shouldContinue = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
-          builder: (BuildContext dialogcontext) {
+          builder: (BuildContext context) {
             final theme = Theme.of(context);
             final isDarkMode = theme.brightness == Brightness.dark;
 
@@ -296,7 +314,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           onPressed: () async {
-                            Navigator.of(dialogcontext).pop(true);
+                            Navigator.of(context).pop(true);
                           },
                           child: const Text(
                             'YES',
@@ -313,7 +331,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          onPressed: () => Navigator.of(dialogcontext).pop(false),
+                          onPressed: () => Navigator.of(context).pop(false),
                           child: const Text(
                             'NO',
                             style: TextStyle(fontSize: 18),
@@ -347,13 +365,14 @@ class _CameraScreenState extends State<CameraScreen> {
             imageUrl: foodInfo['image_url'] as String?,
           ),
         ),
-      ).then((_) async {
-        bool firstTime = await UserPreferences.isFirstFoodSaved();
-        if (firstTime && mounted) {
-          await UserPreferences.setFirstFoodSavedFalse();
-          showCongratulationsPopup(context);
+      ).then((result) async {
+        if (result == true){
+          bool firstTime = await UserPreferences.isFirstFoodSaved();
+          if (firstTime && mounted) {
+            await UserPreferences.setFirstFoodSavedFalse();
+            showCongratulationsPopup(context);
+          }
         }
-
       });
     } catch (e) {
       // Dismiss loading indicator if it's showing

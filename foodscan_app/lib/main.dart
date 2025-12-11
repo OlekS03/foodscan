@@ -18,7 +18,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'FoodScan',
           theme: themeProvider.theme,
-          home: const MainScaffold(),
+          home: MainScaffold(key: mainScaffoldKey),
         );
       },
     );
@@ -35,20 +35,20 @@ class MyApp extends StatelessWidget {
 }
 
 class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
+  MainScaffold({Key? key}) : super(key: key);
 
   @override
-  State<MainScaffold> createState() => _MainScaffoldState();
+  State<MainScaffold> createState() => MainScaffoldState();
 }
 
-class _MainScaffoldState extends State<MainScaffold> {
+class MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 1;
 
   final FoodListScreen _foodListScreen = FoodListScreen(key: foodListKey);
   final CameraScreen _cameraScreen = const CameraScreen();
   final UserScreen _userScreen = UserScreen(key: userScreenKey);
-  
-  Future<void> _onItemTapped(int index) async {
+
+  Future<void> onItemTapped(int index) async {
     setState(() {
       _selectedIndex = index;
       if (_selectedIndex == 0) {
@@ -58,6 +58,17 @@ class _MainScaffoldState extends State<MainScaffold> {
 
     bool isNew = await UserPreferences.isNewUserProfile();
     if (index == 2 && isNew) {
+      userScreenKey.currentState?.checkProfileUserPopup();
+    }
+  }
+
+  Future<void> switchToProfileTab() async {
+    setState(() {
+      _selectedIndex = 2;
+    });
+
+    bool isNew = await UserPreferences.isNewUserProfile();
+    if (isNew) {
       userScreenKey.currentState?.checkProfileUserPopup();
     }
   }
@@ -77,7 +88,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
+        onDestinationSelected: onItemTapped,
         backgroundColor: colorScheme.surface,
         indicatorColor: colorScheme.primaryContainer,
         destinations: const [
