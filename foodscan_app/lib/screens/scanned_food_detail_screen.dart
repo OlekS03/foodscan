@@ -323,7 +323,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
                                         traces,
                                         matchedAllergens.isNotEmpty || matchedAdditives.isNotEmpty,
                                       );
-                                      Navigator.pop(context);
+                                      Navigator.pop(context, true);
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.black,
@@ -465,7 +465,7 @@ class ScannedFoodDetailScreen extends StatelessWidget {
         return ' kcal';
       case 'sodium':
       case 'salt':
-        return ' mg';
+        return ' g';
       default:
         return 'g';
     }

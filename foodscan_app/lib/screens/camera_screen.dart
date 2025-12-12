@@ -3,6 +3,12 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../logic/food_info.dart';
 import '../services/user_preferences.dart';
 import 'scanned_food_detail_screen.dart';
+import 'user_screen.dart';
+import 'package:foodscan_app/main.dart';
+import 'package:foodscan_app/global_keys.dart';
+
+
+
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -19,12 +25,142 @@ class _CameraScreenState extends State<CameraScreen> {
   void initState() {
     super.initState();
     _controller.start();
+    _checkNewUserPopup();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void showCongratulationsPopup(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          final theme = Theme.of(context);
+          final isDarkMode = theme.brightness == Brightness.dark;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Center(
+              child: Text(
+                "CONGRATULATIONS!",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text(
+                  'After you save any food, you can navigate to your "Food List" to see it again.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18),
+                ),
+              ],
+            ),
+            actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDarkMode ? Colors.tealAccent[700] : Colors.green[600],
+                  foregroundColor: Colors.white,
+                  elevation: 5,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text(
+                  "OK",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    });
+  }
+
+  void _checkNewUserPopup() async {
+    bool isNew = await UserPreferences.isNewUserCam();
+
+    if (isNew && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            final theme = Theme.of(context);
+            final isDarkMode = theme.brightness == Brightness.dark;
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Center(
+                child: Text(
+                  "HELLO NEW USER!",
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text(
+                    'We see this is your first time scanning! Navigate to the "Profile" tab to get started by adding your known allergens',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 15),
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+              actions: [
+                TextButton(
+                  onPressed: ()async {
+                    await UserPreferences.setNewUserCamFalse();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    "Not Now",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDarkMode ? Colors.tealAccent[700] : Colors.green[600],
+                    foregroundColor: Colors.white,
+                    elevation: 5,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    await UserPreferences.setNewUserCamFalse();
+                    Navigator.of(context).pop();
+                    mainScaffoldKey.currentState?.switchToProfileTab();
+                  },
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      });
+    }
   }
 
   void _toggleScanning() {
@@ -103,8 +239,8 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (!mounted) return;
 
-      if (matchedAllergens.isNotEmpty) {
-        final shouldContinue = await showDialog<bool>(
+      if (matchedAllergens.isNotEmpty || matchedAdditives.isNotEmpty) {
+        final bool shouldContinue = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (BuildContext context) {
@@ -116,25 +252,37 @@ class _CameraScreenState extends State<CameraScreen> {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.warning, color: Colors.red, size: 32),
+                  Icon(
+                    Icons.warning,
+                    color: matchedAllergens.isNotEmpty ? Colors.red : Colors.orange,
+                    size: 32,
+                  ),
                   const SizedBox(width: 10),
                   Text(
-                    'ALLERGIC',
+                    matchedAllergens.isNotEmpty ? 'ALLERGIC' : 'Contains Additives',
                     style: TextStyle(
-                      color: isDarkMode ? Colors.red[400] : Colors.red,
+                      color: matchedAllergens.isNotEmpty
+                          ? (isDarkMode ? Colors.red[400] : Colors.red)
+                          : (isDarkMode ? Colors.orange[400] : Colors.orange),
                       fontWeight: FontWeight.bold,
                       fontSize: 24,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Icon(Icons.warning, color: isDarkMode ? Colors.red[400] : Colors.red, size: 32),
+                  Icon(
+                    Icons.warning,
+                    color: matchedAllergens.isNotEmpty ? Colors.red : Colors.orange,
+                    size: 32,
+                  ),
                 ],
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'CONTAINS:\n"${matchedAllergens.join('", "')}"',
+                    matchedAllergens.isNotEmpty
+                        ? ('CONTAINS:\n"${matchedAllergens.join('", "')}"')
+                        : ('CONTAINS:\n"${matchedAdditives.join('", "')}"'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 18,
@@ -165,11 +313,14 @@ class _CameraScreenState extends State<CameraScreen> {
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          onPressed: () => Navigator.of(context).pop(true),
+                          onPressed: () async {
+                            Navigator.of(context).pop(true);
+                          },
                           child: const Text(
                             'YES',
-                            style: TextStyle(fontSize: 18),
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
+
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -193,14 +344,13 @@ class _CameraScreenState extends State<CameraScreen> {
               ],
             );
           },
-        );
+        ) ?? false;
 
         if (shouldContinue != true) {
           return;
         }
       }
-
-      Navigator.push(
+      Navigator.push<bool>(
         context,
         MaterialPageRoute(
           builder: (context) => ScannedFoodDetailScreen(
@@ -215,7 +365,15 @@ class _CameraScreenState extends State<CameraScreen> {
             imageUrl: foodInfo['image_url'] as String?,
           ),
         ),
-      );
+      ).then((result) async {
+        if (result == true){
+          bool firstTime = await UserPreferences.isFirstFoodSaved();
+          if (firstTime && mounted) {
+            await UserPreferences.setFirstFoodSavedFalse();
+            showCongratulationsPopup(context);
+          }
+        }
+      });
     } catch (e) {
       // Dismiss loading indicator if it's showing
       if (mounted && Navigator.of(context).canPop()) {

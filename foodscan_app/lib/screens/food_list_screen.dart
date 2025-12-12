@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/user_preferences.dart';
 import 'dart:convert';
+import 'scanned_food_detail_screen.dart';
 
 class FoodListScreen extends StatefulWidget {
   const FoodListScreen({super.key});
@@ -13,7 +14,9 @@ class FoodListScreen extends StatefulWidget {
 class FoodListScreenState extends State<FoodListScreen> with SingleTickerProviderStateMixin {
   List<Map<String, Object>> foodInfo = [];
   late AnimationController _controller;
-
+  List<String> matchedAllergens = [];
+  List<String> matchedAdditives = [];
+  Map<String, dynamic> nutriments = {};
   
   Future<void> reloadFoods() async {
     await _loadFoods();
@@ -113,6 +116,9 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
       final matchedAllergens = await UserPreferences.findMatchingAllergens(ingredients, allergenTags, traces);
       final matchedAdditives = await UserPreferences.findMatchingAdditives(ingredients);
 
+      food['matchedAllergens'] = matchedAllergens;
+      food['matchedAdditives'] = matchedAdditives;
+
       food['hasAllergen'] = matchedAllergens.isNotEmpty;
       food['hasAdditive'] = matchedAdditives.isNotEmpty;
     }
@@ -142,7 +148,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
         return {
           'foodName': parts[0],
           'ingredients': parts.length > 1 ? parts[1] : '',
-          'nutriments': parts.length > 2 ? _parseNutriments(parts[2]) : <String, Object>{},
+          'nutriments': parts.length > 2 ? _parseNutriments(parts[2]) : <String, dynamic>{},
           'allergenTags': parts.length > 3 ?
             (parts[3].isEmpty ? <Object>[] : parts[3].split(',').map((e) => e as Object).toList()) : <Object>[],
           'traces': parts.length > 4 ?
@@ -171,12 +177,12 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     }
   }
 
-  Map<String, Object> _parseNutriments(String nutrimentsStr) {
+  Map<String, dynamic> _parseNutriments(String nutrimentsStr) {
     try {
-      // Parse the JSON string back into a Map
       final Map<String, dynamic> decoded = jsonDecode(nutrimentsStr);
-      return Map<String, Object>.from(decoded);
+      return decoded;
     } catch (e) {
+      print('Failed to parse nutriments: $e | input: $nutrimentsStr');
       return {};
     }
   }
@@ -185,7 +191,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     try {
       final prefs = await SharedPreferences.getInstance();
       final List<String> encodedFoods = foodInfo.map((food) {
-        final nutriments = food['nutriments'] as Map<String, Object>;
+        final nutriments = food['nutriments'] as Map<String, dynamic>;
 
         // Convert nutriments map directly to JSON string
         final nutrimentStr = jsonEncode(nutriments);
@@ -233,7 +239,7 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     bool hasAllergen,
   ) {
     // Ensure nutriments are properly formatted
-    final formattedNutriments = Map<String, Object>.from({
+    final formattedNutriments = Map<String, dynamic>.from({
       'energy-kcal': nutriments['energy-kcal'] ?? 0,
       'proteins': nutriments['proteins'] ?? 0,
       'carbohydrates': nutriments['carbohydrates'] ?? 0,
@@ -400,7 +406,8 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     final String foodName = food['foodName'] as String;
     final String ingredients = food['ingredients'] as String;
     final List<dynamic> allergenTags = food['allergenTags'] as List<dynamic>;
-    final Map<String, Object> nutriments = food['nutriments'] as Map<String, Object>;
+    final Map<String, dynamic> nutriments = food['nutriments'] as Map<String, dynamic>;
+    final List<dynamic> matchedAdditives = (food['matchedAdditives'] as List<dynamic>? ?? []).cast<String>();
 
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
@@ -491,14 +498,8 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
           if (isExpanded) ...[
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: hasAllergen
-                    ? (isDarkMode ? Colors.red.withOpacity(0.3) : Colors.red[100])
-                    : hasAdditive
-                        ? (isDarkMode ? Colors.orange.withOpacity(0.3) : Colors.orange[100])
-                        : (isDarkMode ? Colors.green.withOpacity(0.3) : Colors.green[100]),
-              ),
+              color: theme.colorScheme.surface,
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   if (hasAllergen) ...[
@@ -535,11 +536,72 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
                 ],
               ),
             ),
-            _buildNutritionInfo(nutriments),
-            _buildAdditiveSection(),
+
+            const SizedBox(height: 1),
+
+            Container(
+              width: double.infinity,
+              color: theme.colorScheme.surface,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Additives:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (matchedAdditives.isNotEmpty)
+                    Text(
+                      matchedAdditives.join(', '),
+                      style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: _calculateAdditiveLevel(),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _getAdditiveColor(_calculateAdditiveLevel()),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Low', style: TextStyle(fontSize: 12)),
+                      Text('Moderate', style: TextStyle(fontSize: 12)),
+                      Text('High', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            Container(height: 1, color: Colors.black),
+
+            ..._buildMacroNutrientBars(context, nutriments),
+
+            const SizedBox(height: 1),
+
             _buildInfoSection('Ingredients:', ingredients),
+
             if (allergenTags.isNotEmpty)
               _buildInfoSection('Allergens:', allergenTags.join(', ')),
+
             const SizedBox(height: 16),
           ],
         ],
@@ -586,50 +648,6 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
     );
   }
 
-  Widget _buildNutritionInfo(Map<String, Object> nutriments) {
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[800] : Colors.grey[400],
-        border: Border(
-          bottom: BorderSide(color: (isDarkMode ? Colors.grey[700] : Colors.grey[500])!, width: 1),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Nutrition Information',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNutrientBox('Calories',
-                nutriments['energy-kcal']?.toString() ?? '0',
-                'kcal'),
-              _buildNutrientBox('Protein',
-                nutriments['proteins']?.toString() ?? '0',
-                'g'),
-              _buildNutrientBox('Carbs',
-                nutriments['carbohydrates']?.toString() ?? '0',
-                'g'),
-              _buildNutrientBox('Fat',
-                nutriments['fat']?.toString() ?? '0',
-                'g'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildNutrientBox(String label, String value, String unit) {
     final theme = Theme.of(context);
@@ -714,4 +732,206 @@ class FoodListScreenState extends State<FoodListScreen> with SingleTickerProvide
       ),
     );
   }
+
+ List<Widget> _buildMacroNutrientBars(BuildContext context, Map<String, dynamic> nutriments) {
+    return [
+      _buildNutrientBar(context, 'Protein', 'proteins_serving', 'proteins_100g', 'proteins', nutriments),
+      Container(height: 1, color: Colors.black),
+      _buildNutrientBar(context, 'Fats', 'fat_serving', 'fat_100g', 'fat', nutriments),
+      Container(height: 1, color: Colors.black),
+      _buildNutrientBar(context, 'Carbs', 'carbohydrates_serving', 'carbohydrates_100g', 'carbohydrates', nutriments),
+      Container(height: 1, color: Colors.black),
+    ];
+  }
+
+  Widget _buildNutrientBar(BuildContext context, String name, String primaryKey, String fallbackKey, String evenMoreFallback, Map<String, dynamic> nutriments) {
+    double? value = _getNutrientValue([primaryKey, fallbackKey, evenMoreFallback, '${fallbackKey}_100g'], nutriments);
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.surface,
+      margin: const EdgeInsets.only(bottom: 1),
+      padding: const EdgeInsets.all(16),
+      child: value != null ?
+        _buildNutrientWithBar(context, name, value) :
+        _buildNutrientNotProvided(context, name),
+    );
+  }
+
+  Widget _buildNutrientWithBar(BuildContext context, String name, double value) {
+    final level = _calculateNutrientLevel(name, value);
+    final description = _getNutrientDescription(name, level);
+    final color = _getNutrientColor(level);
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: TextStyle(
+            fontSize: 14,
+            color: theme.textTheme.bodyMedium?.color,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Progress bar
+        Container(
+          height: 8,
+          decoration: BoxDecoration(
+            color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: level,
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Low', style: TextStyle(fontSize: 12)),
+            Text('Moderate', style: TextStyle(fontSize: 12)),
+            Text('High', style: TextStyle(fontSize: 12)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNutrientNotProvided(BuildContext context, String name) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Info not provided',
+          style: TextStyle(
+            fontSize: 14,
+            color: theme.textTheme.bodyMedium?.color,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 8,
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Center(
+            child: Text(
+              '✕',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Low', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            Text('Moderate', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            Text('High', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  double? _getNutrientValue(List<String> possibleKeys, Map<String, dynamic> nutriments) {
+    for (String key in possibleKeys) {
+      final value = nutriments[key];
+      if (value != null) {
+        if (value is num) {
+          return value.toDouble();
+        } else if (value is String) {
+          return double.tryParse(value);
+        }
+      }
+    }
+    return null;
+  }
+
+  double _calculateNutrientLevel(String nutrientName, double value) {
+    if (value <= 0) return 0.0;
+
+    Map<String, Map<String, double>> thresholds = {
+      'Protein': {'low': 5.0, 'high': 20.0},
+      'Fats': {'low': 3.0, 'high': 17.5},
+      'Carbs': {'low': 5.0, 'high': 22.5},
+    };
+
+    final threshold = thresholds[nutrientName];
+    if (threshold == null) return 0.5;
+
+    if (value <= threshold['low']!) {
+      return 0.25; // Low
+    } else if (value >= threshold['high']!) {
+      return 1.0; // High
+    } else {
+
+      final range = threshold['high']! - threshold['low']!;
+      final position = (value - threshold['low']!) / range;
+      return 0.25 + (position * 0.75);
+    }
+  }
+
+  String _getNutrientDescription(String nutrientName, double level) {
+    if (level <= 0.33) {
+      return 'Low amount of ${nutrientName.toLowerCase()}';
+    } else if (level <= 0.66) {
+      return 'Moderate amount of ${nutrientName.toLowerCase()}';
+    } else {
+      return 'Great amount of ${nutrientName.toLowerCase()}';
+    }
+  }
+
+  Color _getNutrientColor(double level) {
+    if (level <= 0.33) return Colors.green;
+    if (level <= 0.66) return Colors.orange;
+    return Colors.red;
+  }
+
+  double _calculateAdditiveLevel() {
+    if (matchedAdditives.isEmpty) return 0.2;
+    if (matchedAdditives.length <= 2) return 0.4; //
+    if (matchedAdditives.length <= 4) return 0.7; //
+    return 1.0;
+  }
+
+  Color _getAdditiveColor(double level) {
+    if (level <= 0.3) return Colors.green;
+    if (level <= 0.6) return Colors.orange;
+    return Colors.red;
+  }
+
 }
