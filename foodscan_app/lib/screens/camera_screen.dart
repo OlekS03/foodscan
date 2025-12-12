@@ -18,7 +18,7 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen> {
-  bool _isScanning = false;
+  bool _isScanning = true;
   final MobileScannerController _controller = MobileScannerController();
 
   @override
@@ -477,13 +477,13 @@ class _CameraScreenState extends State<CameraScreen> {
           onPressed: _toggleScanning,
           backgroundColor: _isScanning
             ? Colors.red[600]
-            : (isDarkMode ? theme.colorScheme.primary : Colors.green[600]),
-          foregroundColor: Colors.white,
+            : (/*isDarkMode ? theme.colorScheme.primary :*/ Colors.green[600]),
+          foregroundColor: Colors.black,
           elevation: 0,
           icon: Container(
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.black.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -497,6 +497,7 @@ class _CameraScreenState extends State<CameraScreen> {
               fontSize: 16,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
+              color: Colors.black,
             ),
           ),
           extendedPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -512,7 +513,9 @@ class _CameraScreenState extends State<CameraScreen> {
     for (final barcode in barcodes) {
       if (barcode.rawValue != null) {
         _handleBarcodeScan(barcode.rawValue!);
-        _toggleScanning();
+        _isScanning = false;
+        setState(() {});
+
         break;
       }
     }
