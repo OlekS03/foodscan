@@ -22,6 +22,11 @@ class UserScreenState extends State<UserScreen> {
     _loadPreferences();
   }
 
+  Future<void> _loadPreferences() async {
+    allergens = await UserPreferences.getAllergens();
+    additives = await UserPreferences.getAdditives();
+  }
+  
   void checkProfileUserPopup() async {
     
     bool isNew = await UserPreferences.isNewUserProfile();
