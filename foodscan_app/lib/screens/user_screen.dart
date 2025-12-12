@@ -49,7 +49,7 @@ class UserScreenState extends State<UserScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: const [
                   Text(
-                    'Here you can add your known allergens and unwanted additives, and we will alert you when you scan a food containing them.',
+                    'Here you can add allergens or additives you are trying to avoid, and we will alert you when you scan a food containing them.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 18),
                   ),
